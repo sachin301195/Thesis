@@ -15,18 +15,12 @@ def test_with_stable_baselines3_env_checker(custom_jsp_instance):
                         for env_transform in [None, 'mask']:
                             for dt in ["float16", "float32", "float64"]:
 
-                                env = DisjunctiveGraphJspEnv(
-                                    jps_instance=custom_jsp_instance,
-                                    perform_left_shift_if_possible=left_shift,
-                                    scaling_divisor=None,
-                                    scale_reward=scale_rew,
-                                    normalize_observation_space=normalize,
-                                    flat_observation_space=flat,
-                                    action_mode=mode,
-                                    dtype=dt,
-                                    env_transform=env_transform,
-                                    verbose=1
-                                )
+                                env = DisjunctiveGraphJspEnv(jps_instance=custom_jsp_instance, scaling_divisor=None,
+                                                             scale_reward=scale_rew,
+                                                             normalize_observation_space=normalize,
+                                                             flat_observation_space=flat, dtype=dt, action_mode=mode,
+                                                             env_transform=env_transform,
+                                                             perform_left_shift_if_possible=left_shift, verbose=1)
 
                                 check_env(env)
 

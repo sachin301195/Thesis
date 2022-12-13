@@ -54,28 +54,14 @@ class DisjunctiveGraphJspEnv(gym.Env):
     """
     metadata = {'render.modes': ['human', 'rgb_array', 'console']}
 
-    def __init__(self,
-                 jps_instance: np.ndarray = None, *,
-                 # parameters for reward
-                 scaling_divisor: float = None,
-                 scale_reward: bool = True,
-                 # parameters for observation
-                 normalize_observation_space: bool = True,
-                 flat_observation_space: bool = True,
-                 dtype: str = "float32",
-                 # parameters for actions
-                 action_mode: str = "task",
-                 env_transform: str = None,
-                 perform_left_shift_if_possible: bool = True,
-                 # parameters for rendering
-                 c_map: str = "rainbow",
-                 dummy_task_color="tab:gray",
-                 default_visualisations: List[str] = None,
-                 visualizer_kwargs: dict = None,
-                 verbose: int = 1
-                 ):
+    def __init__(self, jps_instance: np.ndarray = None, *, scaling_divisor: float = None, scale_reward: bool = True,
+                 normalize_observation_space: bool = True, flat_observation_space: bool = True, dtype: str = "float32",
+                 action_mode: str = "task", env_transform: str = None, perform_left_shift_if_possible: bool = True,
+                 c_map: str = "rainbow", dummy_task_color="tab:gray", default_visualisations: List[str] = None,
+                 visualizer_kwargs: dict = None, verbose: int = 1):
         """
 
+        :param jsp_instance:
         :param jps_instance:                    a jsp instance as numpy array
 
         :param scaling_divisor:                 lower-bound of the jsp or some other scaling number for the reward.
