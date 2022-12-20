@@ -145,7 +145,6 @@ dependencies:
       - termcolor==2.1.1
       - toml==0.10.2
       - tomli==2.0.1
-      - torch==1.13.0
       - typing-extensions==4.4.0
       - virtualenv==20.17.1
       - wcwidth==0.2.5
