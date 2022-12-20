@@ -77,7 +77,6 @@ dependencies:
       - google-pasta==0.2.0
       - googleapis-common-protos==1.57.0
       - gpustat==1.0.0
-      - graph-jsp-env==0.0.3
       - grpcio==1.51.1
       - gym==0.26.2
       - gym-notices==0.0.8
