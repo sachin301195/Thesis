@@ -1,0 +1,13 @@
+gym~=0.23.1
+numpy~=1.23.5
+imageio~=2.19.3
+pandas~=1.5.2
+matplotlib~=3.6.2
+ray~=2.1.0
+setuptools~=65.6.3
+rich~=12.6.0
+networkx~=2.8.8
+opencv-python~=4.6.0.66
+plotly~=5.11.0
+pytest~=7.2.0
+inquirer~=3.1.1
