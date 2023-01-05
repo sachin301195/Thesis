@@ -523,7 +523,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         if not prev_job_node["scheduled"]:
             if self.verbose > 1:
-                log.info(f"the previous task (T{prev_task_in_job_id}) in the job is not scheduled jet. "
+                log.info(f"the previous task (T{prev_task_in_job_id}) in the job is not scheduled yet. "
                          f"Not scheduling task T{task_id} to avoid cycles in the graph.")
             return {
                 "valid_action": False,

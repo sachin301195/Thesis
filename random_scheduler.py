@@ -7,12 +7,11 @@ def random_action_loop(jsp_instance: np.ndarray) -> None:
 
     env = DisjunctiveGraphJspEnv(
         jps_instance=jsp_instance,
+        scaling_divisor=40,
         perform_left_shift_if_possible=True,
-        normalize_observation_space=True,
-        flat_observation_space=True,
         action_mode='task',  # alternative 'job'
-        dtype='float32',
-        verbose=2
+        flat_observation_space=True,
+        normalize_observation_space=True,
     )
 
     done = False
@@ -38,12 +37,12 @@ def random_action_loop(jsp_instance: np.ndarray) -> None:
 if __name__ == '__main__':
     jsp = np.array([
         [
-            [1, 2, 0],  # job 0
-            [0, 2, 1]  # job 1
+            [0, 1, 2, 3],  # job 0 (engineer’s hammer)
+            [0, 2, 1, 3],  # job 1  (Nine Man Morris)
         ],
         [
-            [17, 12, 19],  # task durations of job 0
-            [8, 6, 2]  # task durations of job 1
+            [11, 3, 3, 12],  # task durations of job 0
+            [5, 16, 7, 4],  # task durations of job 1
         ]
 
     ])
