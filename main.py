@@ -149,7 +149,7 @@ parser.add_argument(
     help="Perform left shift if possible or not for the job operations")
 parser.add_argument(
     "--action-mode",
-    default='task',
+    default='job',
     type=str,
     choices=['task', 'job'],
     help="Choose action mode for the env")
