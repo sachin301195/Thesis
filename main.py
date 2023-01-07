@@ -81,7 +81,7 @@ parser.add_argument(
 parser.add_argument(
     "--stop-iters",
     type=int,
-    default=5000,
+    default=500,
     help="Number of iterations to train")
 parser.add_argument(
     "--stop-timesteps",
@@ -371,7 +371,7 @@ if __name__ == "__main__":
         algo_config = None
 
     stop = {
-        "training_iteration": 100
+        "training_iteration": args.stop_iters
         # "episode_reward_mean": 30 - (40 * args.no_of_jobs * 0.002),
     }
     plots_save_path, agent_save_path, best_agent_save_path = setup(args.algo, timestamp)
