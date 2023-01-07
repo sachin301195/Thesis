@@ -15,7 +15,7 @@ import plotly.figure_factory as ff
 
 from typing import Union
 
-from graph_jsp_env.disjunctive_graph_logger import log
+from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 
 def handler_stop_signals(*_) -> None:

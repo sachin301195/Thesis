@@ -36,7 +36,7 @@ from ray.tune.schedulers import ASHAScheduler
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
-from graph_jsp_env.disjunctive_graph_logger import log
+from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 
 def configure_logger():

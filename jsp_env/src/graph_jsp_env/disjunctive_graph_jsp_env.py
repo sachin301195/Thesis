@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict
 from typing import List, Union
 
-from graph_jsp_env.disjunctive_graph_jsp_visualizer import DisjunctiveGraphJspVisualizer
+from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_visualizer import DisjunctiveGraphJspVisualizer
 
 # from graph_jsp_env.disjunctive_graph_jsp_visualizer import DisjunctiveGraphJspVisualizer
-from graph_jsp_env.disjunctive_graph_logger import log
+from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 
 class DisjunctiveGraphJspEnv(gym.Env):

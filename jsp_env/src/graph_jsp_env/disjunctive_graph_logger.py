@@ -3,12 +3,10 @@ import shutil
 
 from rich.logging import RichHandler
 
-from graph_jsp_env.wzl_ima_banner import big_banner, small_banner
 
 # print banner when logger is imported
 w, h = shutil.get_terminal_size((80, 20))
 
-print(small_banner if w < 140 else big_banner)
 
 FORMAT = "%(message)s"
 logging.basicConfig(
