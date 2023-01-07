@@ -35,7 +35,7 @@ from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
-from graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
+from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
 from graph_jsp_env.disjunctive_graph_logger import log
 
 
