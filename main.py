@@ -103,7 +103,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--eval-interval",
-    default=100,
+    default=50,
     type=int,
     help="Evaluation after n training iterations"
 )
@@ -364,14 +364,14 @@ if __name__ == "__main__":
         if args.lstm:
             algo_config['model']['use_lstm'] = True
             algo_config['model']['lstm_cell_size'] = 64
-        algo_config['evaluation_interval'] = 100
+        algo_config['evaluation_interval'] = args.eval_interval
         # algo_config['evaluation_duration'] = 10
         algo_config["evaluation_parallel_to_training"]: True
     else:
         algo_config = None
 
     stop = {
-        "training_iteration": args.stop_iters
+        "training_iteration": 500
         # "episode_reward_mean": 30 - (40 * args.no_of_jobs * 0.002),
     }
     plots_save_path, agent_save_path, best_agent_save_path = setup(args.algo, timestamp)
