@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import networkx as nx
 import pandas as pd
+import json
 
 import matplotlib.pyplot as plt
 
@@ -683,7 +684,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         :return: the state of the environment as numpy array.
         """
-        adj = nx.to_numpy_matrix(self.G)[1:-1, 1:-1].astype(dtype=int)  # remove dummy tasks
+        adj = nx.to_numpy_array(self.G)[1:-1, 1:-1].astype(dtype=int)  # remove dummy tasks
         task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
         task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
         for task_id, data in self.G.nodes(data=True):
