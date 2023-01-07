@@ -293,7 +293,7 @@ if __name__ == "__main__":
         action_space = 10
         raise ValueError()
 
-    ray.init(local_mode=args.local_mode, object_store_memory=1000000000)
+    ray.init(local_mode=args.local_mode, object_store_memory=100000000)
     register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
     if args.masking:
         if m == n == 3:

@@ -1,5 +1,4 @@
 import io
-
 import cv2
 import signal
 import shutil
