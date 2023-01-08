@@ -271,7 +271,7 @@ class TorchParametricActionsModelv5(DQNTorchModel):
         inf_mask = torch.clamp(torch.log(action_mask), FLOAT_MIN, FLOAT_MAX)
 
         # Compute the predicted action embedding
-        action_embed, _ = self.action_model({"obs": input_dict["obs"]["state"]})
+        action_embed, _ = self.action_model({"obs": input_dict["obs"]["observations"]})
 
         # state is empty
         return action_embed + inf_mask, state
@@ -316,7 +316,7 @@ class TorchParametricActionsModelv6(DQNTorchModel):
         inf_mask = torch.clamp(torch.log(action_mask), FLOAT_MIN, FLOAT_MAX)
 
         # Compute the predicted action embedding
-        action_embed, _ = self.action_model({"obs": input_dict["obs"]["state"]})
+        action_embed, _ = self.action_model({"obs": input_dict["obs"]["observations"]})
 
         # state is empty
         return action_embed + inf_mask, state
@@ -361,7 +361,7 @@ class TorchParametricActionsModelv7(DQNTorchModel):
         inf_mask = torch.clamp(torch.log(action_mask), FLOAT_MIN, FLOAT_MAX)
 
         # Compute the predicted action embedding
-        action_embed, _ = self.action_model({"obs": input_dict["obs"]["state"]})
+        action_embed, _ = self.action_model({"obs": input_dict["obs"]["observations"]})
 
         # state is empty
         return action_embed + inf_mask, state
@@ -406,7 +406,7 @@ class TorchParametricActionsModelv8(DQNTorchModel):
         inf_mask = torch.clamp(torch.log(action_mask), FLOAT_MIN, FLOAT_MAX)
 
         # Compute the predicted action embedding
-        action_embed, _ = self.action_model({"obs": input_dict["obs"]["state"]})
+        action_embed, _ = self.action_model({"obs": input_dict["obs"]["observations"]})
 
         # state is empty
         return action_embed + inf_mask, state
