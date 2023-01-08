@@ -75,7 +75,7 @@ parser.add_argument(
 parser.add_argument(
     "--instance-size",
     type=str,
-    default="3x3",
+    default="6x6",
     choices=["3x3", "6x6", "8x8", "10x10", "15x15", "any"],
     help="Jsp instance size")
 parser.add_argument(
@@ -120,8 +120,9 @@ parser.add_argument(
     help="Use LSTM or not")
 parser.add_argument(
     "--masking",
-    default=False,
-    type=bool,
+    default="mask",
+    type=str,
+    choices=[None, "mask"],
     help="Use masking or not")
 parser.add_argument(
     "--file-no",
@@ -165,7 +166,7 @@ parser.add_argument(
     help="scaling the reward")
 parser.add_argument(
     "--no-of-workers",
-    default=30,
+    default=2,
     type=int,
     help="scaling the reward")
 parser.add_argument(
@@ -242,6 +243,7 @@ class JspEnv_v1(gym.Env, ABC):
         self.action_mode = env_config['action_mode']
         self.perform_left_shift_if_possible = env_config['perform_left_shift_if_possible']
         self.verbose = env_config['verbose']
+        self.env_transform = env_config["env_transform"]
 
         self.env = DisjunctiveGraphJspEnv(jps_instance=self.jps_instance,
                                           scaling_divisor=self.scaling_divisor,
@@ -250,6 +252,7 @@ class JspEnv_v1(gym.Env, ABC):
                                           normalize_observation_space=self.normalize_observation_space,
                                           flat_observation_space=self.flat_observation_space,
                                           action_mode=self.action_mode,
+                                          env_transform=self.env_transform,
                                           verbose=self.verbose)
         self.name = "DisjunctiveGraphJspEnv"
         self.action_space = self.env.action_space
@@ -330,6 +333,7 @@ if __name__ == "__main__":
                 "normalize_observation_space": args.normalize_obs,
                 "flat_observation_space": args.flat_obs,
                 "action_mode": args.action_mode,
+                "env_transform": args.masking,
                 "verbose": args.env_verbose,
             },
             "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),

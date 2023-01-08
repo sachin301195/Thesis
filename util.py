@@ -46,7 +46,7 @@ class TorchParametricActionsModelv1(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(99,),
+                 true_obs_shape=(117,),
                  action_embed_size=3,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -62,16 +62,26 @@ class TorchParametricActionsModelv1(DQNTorchModel):
     def forward(self, input_dict, state, seq_lens):
         # Extract the available actions tensor from the observation.
         # avail_actions = input_dict["obs"]["avail_action"]
+        # print("I reached here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(input_dict)
+        # print(state)
         action_mask = input_dict["obs"]["action_mask"]
+        # print("I reached here11111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+        # print(action_mask)
         # print('action_mask', action_mask)
 
         # Mask out invalid actions (use -inf to tag invalid).
         # These are then recognized by the EpsilonGreedy exploration component
         # as invalid actions that are not to be chosen.
         inf_mask = torch.clamp(torch.log(action_mask), FLOAT_MIN, FLOAT_MAX)
+        # print("I reached here222222222222222222222222222222222222222222222222222222222222222222222222222222222222")
+        # print(inf_mask)
+        # print("wait")
 
         # Compute the predicted action embedding
-        action_embed, _ = self.action_model({"obs": input_dict["obs"]["state"]})
+        action_embed, _ = self.action_model({"obs": input_dict["obs"]["observations"]})
+        # print(action_embed)
+        # print("Well I reached here as well........................................................................")
 
         # state is empty
         return action_embed + inf_mask, state
@@ -91,7 +101,7 @@ class TorchParametricActionsModelv2(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(1368,),
+                 true_obs_shape=(1548,),
                  action_embed_size=6,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -116,7 +126,7 @@ class TorchParametricActionsModelv2(DQNTorchModel):
         inf_mask = torch.clamp(torch.log(action_mask), FLOAT_MIN, FLOAT_MAX)
 
         # Compute the predicted action embedding
-        action_embed, _ = self.action_model({"obs": input_dict["obs"]["state"]})
+        action_embed, _ = self.action_model({"obs": input_dict["obs"]["observations"]})
 
         # state is empty
         return action_embed + inf_mask, state
@@ -136,8 +146,8 @@ class TorchParametricActionsModelv3(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(10200, ),
-                 action_embed_siz =10,
+                 true_obs_shape=(10200,),
+                 action_embed_siz=10,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
                                model_config, name, **kw)
