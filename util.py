@@ -246,7 +246,7 @@ class TorchParametricActionsModelv5(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(10200,),
+                 true_obs_shape=(11100,),
                  action_embed_size=10,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -291,7 +291,7 @@ class TorchParametricActionsModelv6(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(10200,),
+                 true_obs_shape=(11100,),
                  action_embed_size=100,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
