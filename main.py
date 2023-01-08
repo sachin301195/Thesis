@@ -6,8 +6,7 @@ from abc import ABC
 
 import gym
 
-from util import TorchParametricActionModel, TorchParametricActionsModelv1, TorchParametricActionsModelv2, \
-    TorchParametricActionsModelv4, TorchParametricActionsModelv3
+from util import *
 
 import numpy as np
 import pandas as pd
@@ -18,6 +17,7 @@ import matplotlib.pyplot as plt
 import time
 import random
 import json
+from typing import Dict
 
 import ray
 from ray import tune
@@ -37,6 +37,11 @@ from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
 from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
+from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
+from ray.rllib.algorithms.callbacks import DefaultCallbacks
+from ray.rllib.env import BaseEnv
+from ray.rllib.policy import Policy
+from ray.rllib.policy.sample_batch import SampleBatch
 
 
 def configure_logger():
@@ -150,7 +155,7 @@ parser.add_argument(
     help="Perform left shift if possible or not for the job operations")
 parser.add_argument(
     "--action-mode",
-    default='job',
+    default='task',
     type=str,
     choices=['task', 'job'],
     help="Choose action mode for the env")
@@ -204,6 +209,8 @@ def instance_creator(size):
             if m == 1:
                 m = int(size[:2])
         instance_no = str(np.random.randint(len(data["jssp_identification"])))
+        name = data["jssp_identification"][instance_no][:-5]
+        opt_value = data["optimal_time"][instance_no]
         jsp_data = data["jobs_data"][instance_no]
         machine = []
         duration = []
@@ -229,9 +236,25 @@ def instance_creator(size):
                 [8, 6, 2]  # task durations of job 1
             ]
         ])
+        name = "Trail"
+        opt_value = 48
 
-    return jsp
+    return jsp, name, opt_value
 
+
+class MyCallbacks(DefaultCallbacks):
+    def on_episode_end(
+        self,
+        *,
+        worker: RolloutWorker,
+        base_env: BaseEnv,
+        policies: Dict[str, Policy],
+        episode: MultiAgentEpisode,
+        **kwargs,
+    ):
+        name = episode.algo_config["env_config"]["jps_instance"][1]
+        opt_value = episode.env_config["jps_instance"][-1]
+        print(name, opt_value)
 
 class JspEnv_v1(gym.Env, ABC):
     def __init__(self, env_config):
@@ -245,7 +268,7 @@ class JspEnv_v1(gym.Env, ABC):
         self.verbose = env_config['verbose']
         self.env_transform = env_config["env_transform"]
 
-        self.env = DisjunctiveGraphJspEnv(jps_instance=self.jps_instance,
+        self.env = DisjunctiveGraphJspEnv(jps_instance=self.jps_instance[0],
                                           scaling_divisor=self.scaling_divisor,
                                           scale_reward=self.scale_reward,
                                           perform_left_shift_if_possible=self.perform_left_shift_if_possible,
@@ -299,14 +322,26 @@ if __name__ == "__main__":
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
     register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
     if args.masking:
-        if m == n == 3:
-            ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
+        if m == n == 3 and args.action_mode == "job":
+            if args.action_mode == "job":
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
+            else:
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv2)
         elif m == n == 6:
-            ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv2)
+            if args.action_mode == "job":
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv3)
+            else:
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv4)
         elif m == n == 10:
-            ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv3)
+            if args.action_mode == "job":
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv5)
+            else:
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv6)
         else:
-            ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv4)
+            if args.action_mode == "job":
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv7)
+            else:
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv8)
     else:
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionModel)
 
@@ -348,6 +383,7 @@ if __name__ == "__main__":
             # "vf_clip_param": 10,
             # "lr": tune.grid_search([0.001, 0.0001])
             "lr": 0.0001,
+            "callbacks": MyCallbacks,
             # "optimizer": "SGD",
             # "entropy_coeff": tune.grid_search([tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
             #                                    tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
