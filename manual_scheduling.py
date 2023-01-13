@@ -2,8 +2,8 @@ import inquirer
 import numpy as np
 import time
 
-from graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
-from graph_jsp_env.disjunctive_graph_logger import log
+from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
+from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 if __name__ == '__main__':
 

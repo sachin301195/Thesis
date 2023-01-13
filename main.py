@@ -98,7 +98,7 @@ parser.add_argument(
     default="train",
     type=str,
     choices=["train", "test", "trial", "evaluate"],
-    help="Evaluation while training TRUE/FALSE"
+    help="Algo running as"
 )
 parser.add_argument(
     "--eval-tune",
@@ -194,8 +194,8 @@ def setup(algo, timestamp):
     return plots_save_path, agent_save_path, best_agent_save_path
 
 
-def instance_creator(size):
-    if args.run_type == "train":
+def instance_creator(size, run_type):
+    if run_type == "train" or run_type == "evaluate":
         if size != "any":
             with open(f"./data/{size}.json") as f:
                 data = json.load(f)
@@ -282,10 +282,16 @@ class JspEnv_v1(gym.Env, ABC):
         self.observation_space = self.env.observation_space
 
     def reset(self):
+
         return self.env.reset()
 
     def step(self, action):
+
         return self.env.step(action)
+
+    def render(self, mode, show):
+
+        return self.env.render(mode=mode, show=show)
 
 
 if __name__ == "__main__":
@@ -361,7 +367,7 @@ if __name__ == "__main__":
                 "vf_share_layers": True
             },
             "env_config": {
-                "jps_instance": instance_creator(args.instance_size),
+                "jps_instance": instance_creator(args.instance_size, args.run_type),
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -378,11 +384,11 @@ if __name__ == "__main__":
             "train_batch_size": 4000,
             # "sgd_minibatch_size": 512,
             # "num_sgd_iter": 20,
-            "vf_loss_coeff": 0.0005,
-            # "vf_loss_coeff": tune.grid_search([0.0005, 0.0009]),
+            # "vf_loss_coeff": 0.0005,
+            # "vf_loss_coeff": tune.grid_search([0.001, 0.0005, 0.0009]),
             # "vf_clip_param": 10,
-            # "lr": tune.grid_search([0.001, 0.0001])
-            "lr": 0.0001,
+            "lr": tune.grid_search([0.001, 0.0001])
+            # "lr": 0.0001,
             # "callbacks": MyCallbacks,
             # "optimizer": "SGD",
             # "entropy_coeff": tune.grid_search([tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
