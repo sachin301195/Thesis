@@ -385,7 +385,7 @@ if __name__ == "__main__":
             # "sgd_minibatch_size": 512,
             # "num_sgd_iter": 20,
             # "vf_loss_coeff": 0.0005,
-            # "vf_loss_coeff": tune.grid_search([0.001, 0.0005, 0.0009]),
+            "vf_loss_coeff": tune.grid_search([0.001, 0.0005, 0.0009]),
             # "vf_clip_param": 10,
             "lr": tune.grid_search([0.001, 0.0001])
             # "lr": 0.0001,
