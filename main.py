@@ -373,7 +373,7 @@ if __name__ == "__main__":
                 "perform_left_shift_if_possible": args.left_shift,
                 "normalize_observation_space": args.normalize_obs,
                 "flat_observation_space": args.flat_obs,
-                "action_mode": args.action_mode,
+                "action_mode": tune.grid_search(["job", "task"]),
                 "env_transform": args.masking,
                 "verbose": args.env_verbose,
             },
