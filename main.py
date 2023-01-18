@@ -327,8 +327,8 @@ if __name__ == "__main__":
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
     register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
-    if args.masking:
-        if m == n == 3 and args.action_mode == "job":
+    if args.masking == "mask":
+        if m == n == 3:
             if args.action_mode == "job":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
             else:
@@ -373,7 +373,7 @@ if __name__ == "__main__":
                 "perform_left_shift_if_possible": args.left_shift,
                 "normalize_observation_space": args.normalize_obs,
                 "flat_observation_space": args.flat_obs,
-                "action_mode": tune.grid_search(["job", "task"]),
+                "action_mode": args.action_mode,
                 "env_transform": args.masking,
                 "verbose": args.env_verbose,
             },
