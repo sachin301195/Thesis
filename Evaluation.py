@@ -153,7 +153,7 @@ parser.add_argument(
     help="Perform left shift if possible or not for the job operations")
 parser.add_argument(
     "--action-mode",
-    default='job',
+    default='task',
     type=str,
     choices=['task', 'job'],
     help="Choose action mode for the env")
@@ -180,8 +180,8 @@ parser.add_argument(
 
 
 def setup(algo, timestamp):
-    Path(f'./plots/{algo}').mkdir(parents=True, exist_ok=True)
-    plots_save_path = './plots/' + algo + timestamp
+    Path(f'./plots/{algo}/{timestamp}').mkdir(parents=True, exist_ok=True)
+    plots_save_path = './plots/' + algo + "/" + timestamp
     Path(f'./agents_runs/{algo}//{timestamp}').mkdir(parents=True, exist_ok=True)
     agent_save_path = './agents_runs/' + algo + '/' + timestamp
     best_agent_save_path = './agents_runs/' + algo + '/' + timestamp \
@@ -193,7 +193,7 @@ def setup(algo, timestamp):
 
 
 def evaluate(algo, algo_config: dir, plots_save_path):
-    f = [r"E:\Sachin\agents_runs\PPO\2023-01-08_best_agents\PPO\PPO_Dis_jsp_6x6_ad238_00000_0_2023-01-08_06-07-05\checkpoint_000500\algorithm_state.pkl"]
+    f = [r"E:\Sachin\agents_runs\PPO\2023-01-13_best_agents\PPO\PPO_Dis_jsp_6x6_f04b9_00005_5_lr=0.0001,vf_loss_coeff=0.0009_2023-01-14_09-54-30\checkpoint_000250\algorithm_state.pkl"]
     for no, path in enumerate(f):
         if algo == 'PPO':
             agent = ppo.PPO(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
@@ -208,9 +208,13 @@ def evaluate(algo, algo_config: dir, plots_save_path):
 
     time_begin = time.time()
     score_episode = []
+    optimal_value = {}
+    makespan = []
     while curr_episode <= max_episode:
+        curr_episode += 1
         jsp = instance_creator(args.instance_size, args.run_type)
         print(jsp[0].shape)
+        optimal_value[jsp[1]] = jsp[-1]
         logger.info(f"Evaluating episode: {curr_episode}")
         logger.info(f"Jsp problem {jsp[1]}, with optimal value {jsp[-1]}: \n {jsp[0]}")
         env_config = {
@@ -237,8 +241,12 @@ def evaluate(algo, algo_config: dir, plots_save_path):
             step += 1
             if len(info) > 0 and done:
                 logger.info(f"Details: {info}")
-        curr_episode += 1
+                makespan.append(info["makespan"])
+
         env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
+        plt.scatter(optimal_value.keys(), makespan, marker="o")
+        plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
+        plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
         # time.sleep(100)
 
 

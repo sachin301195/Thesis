@@ -684,7 +684,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         :return: the state of the environment as numpy array.
         """
-        adj = nx.to_numpy_array(self.G)[1:-1, 1:-1].astype(dtype=int)  # remove dummy tasks
+        adj = nx.to_numpy_array(self.G)[1:-1, 2:].astype(dtype=int) # remove dummy tasks
+        # print(adj)
         task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
         task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
         for task_id, data in self.G.nodes(data=True):
