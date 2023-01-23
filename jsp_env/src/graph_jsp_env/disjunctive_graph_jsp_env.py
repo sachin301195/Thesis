@@ -138,8 +138,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.machine_colors = None
         self.G = None
         self.machine_routes = None
-        self.task_to_duration_mapping = None
-        self.task_to_machine_mapping = None
+        # self.task_to_duration_mapping = None
+        # self.task_to_machine_mapping = None
 
         self.scale_reward = scale_reward
         self.time_length = 0
@@ -148,7 +148,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.normalize_observation_space = normalize_observation_space
         self.flat_observation_space = flat_observation_space
         self.dtype = dtype
-        self.start = False
+        # self.start = False
 
         # action setting
         self.perform_left_shift_if_possible = perform_left_shift_if_possible
@@ -200,8 +200,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         self.longest_processing_time = jsp_instance[1].max()
 
-        self.task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
-        self.task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
+        # self.task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
+        # self.task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
 
         if self.action_mode == 'task':
             self.action_space = gym.spaces.Discrete(self.total_tasks_without_dummies)
@@ -349,7 +349,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         :param action: an action
         :return: state, reward, done-flag, info-dict
         """
-        self.start = False
+        # self.start = False
         info = {
             'action': action
         }
@@ -418,7 +418,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         :return: initial state as numpy array.
         """
         # remove machine edges/routes
-        self.start = True
+        # self.start = True
         machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
         self.G.remove_edges_from(machine_edges)
 
@@ -695,28 +695,29 @@ class DisjunctiveGraphJspEnv(gym.Env):
         """
         adj = nx.to_numpy_array(self.G)[1:-1, 1:].astype(dtype=int) # remove dummy tasks
         # print(adj)
-        # print(adj)
+        task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
+        task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
 
-        if self.start:
-            for task_id, data in self.G.nodes(data=True):
-                if task_id == self.src_task or task_id == self.sink_task:
-                    continue
-                else:
-                    # index shift because of the removed dummy tasks
-                    self.task_to_machine_mapping[task_id - 1] = data["machine"]
-                    self.task_to_duration_mapping[task_id - 1] = data["duration"]
+        # if self.start:
+        for task_id, data in self.G.nodes(data=True):
+            if task_id == self.src_task or task_id == self.sink_task:
+                continue
+            else:
+                # index shift because of the removed dummy tasks
+                task_to_machine_mapping[task_id - 1] = data["machine"]
+                task_to_duration_mapping[task_id - 1] = data["duration"]
 
         if self.normalize_observation_space:
             # one hot encoding for task to machine mapping
-            if self.start:
-                self.task_to_machine_mapping = self.task_to_machine_mapping.astype(int).ravel()
-                n_values = np.max(self.task_to_machine_mapping) + 1
-                self.task_to_machine_mapping = np.eye(n_values)[self.task_to_machine_mapping]
-                self.task_to_duration_mapping = self.task_to_duration_mapping / self.longest_processing_time
+            # if self.start:
+            task_to_machine_mapping = task_to_machine_mapping.astype(int).ravel()
+            n_values = np.max(task_to_machine_mapping) + 1
+            task_to_machine_mapping = np.eye(n_values)[task_to_machine_mapping]
+            task_to_duration_mapping = task_to_duration_mapping / self.longest_processing_time
             # normalize
             adj = adj / self.longest_processing_time  # note: adj matrix contains weights
             # merge arrays
-            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping), axis=1, dtype=self.dtype)
+            res = np.concatenate((adj, task_to_machine_mapping, task_to_duration_mapping), axis=1, dtype=self.dtype)
             """
 
             Example:
@@ -815,7 +816,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 [ 0.,  0.,  ...,  0.,  1.,  2.]
             ]
             """
-            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping), axis=1, dtype=self.dtype)
+            res = np.concatenate((adj, task_to_machine_mapping, task_to_duration_mapping), axis=1, dtype=self.dtype)
 
         if self.flat_observation_space:
             # falter observation
