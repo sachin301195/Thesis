@@ -316,7 +316,7 @@ if __name__ == "__main__":
 
         if args.normalize_obs:
             observation_space_shape = (m * n,
-                                       (m * n) + n + 1)
+                                       (m * n) + n + 2)
         else:
             observation_space_shape = (m * n, (m * n) + 2)
 
