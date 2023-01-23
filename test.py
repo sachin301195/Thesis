@@ -44,7 +44,7 @@ TRIAL = False
 
 
 if __name__ == "__main__":
-    size = "3x3"
+    size = "6x6"
     c_episode = 1
     while c_episode <= NUM_EPISODES:
         c_episode += 1
@@ -52,11 +52,11 @@ if __name__ == "__main__":
 
         env = DisjunctiveGraphJspEnv(jps_instance=jsp[0],
                                      scaling_divisor=40,
-                                     action_mode="job",
+                                     action_mode="task",
                                      env_transform="mask",
                                      perform_left_shift_if_possible=True,
                                      normalize_observation_space=True,
-                                     flat_observation_space=True,
+                                     flat_observation_space=False,
                                      verbose=2)
         OPTIMUM_VALUE[jsp[1]] = jsp[2]
         obs = env.reset()
