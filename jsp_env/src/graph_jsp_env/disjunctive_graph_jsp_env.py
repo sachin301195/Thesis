@@ -210,7 +210,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         if self.normalize_observation_space:
             self.observation_space_shape = (self.total_tasks_without_dummies,
-                                            self.total_tasks_without_dummies + self.n_machines + 1)
+                                            self.total_tasks_without_dummies + self.n_machines + 2)
         else:
             self.observation_space_shape = (self.total_tasks_without_dummies, self.total_tasks_without_dummies + 2)
 
