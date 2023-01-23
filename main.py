@@ -145,7 +145,7 @@ parser.add_argument(
     help="Normalize obs or not")
 parser.add_argument(
     "--flat-obs",
-    default=True,
+    default=False,
     type=bool,
     help="flatting the obs or not")
 parser.add_argument(
@@ -171,7 +171,7 @@ parser.add_argument(
     help="scaling the reward")
 parser.add_argument(
     "--no-of-workers",
-    default=31,
+    default=1,
     type=int,
     help="scaling the reward")
 parser.add_argument(
@@ -222,6 +222,9 @@ def instance_creator(size, run_type):
                 else:
                     duration.append(j)
                 c += 1
+        machine = list(map(int, machine))
+        duration = list(map(int, duration))
+        print(machine, duration)
         machine = np.array(machine).reshape(m, m)
         duration = np.array(duration).reshape(m, m)
         jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, m)
