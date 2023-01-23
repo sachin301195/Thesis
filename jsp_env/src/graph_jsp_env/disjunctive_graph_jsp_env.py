@@ -138,13 +138,17 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.machine_colors = None
         self.G = None
         self.machine_routes = None
+        self.task_to_duration_mapping = None
+        self.task_to_machine_mapping = None
 
         self.scale_reward = scale_reward
+        self.time_length = 0
 
         # observation settings
         self.normalize_observation_space = normalize_observation_space
         self.flat_observation_space = flat_observation_space
         self.dtype = dtype
+        self.start = False
 
         # action setting
         self.perform_left_shift_if_possible = perform_left_shift_if_possible
@@ -195,6 +199,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.sink_task = self.total_tasks - 1
 
         self.longest_processing_time = jsp_instance[1].max()
+
+        self.task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
+        self.task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
 
         if self.action_mode == 'task':
             self.action_space = gym.spaces.Discrete(self.total_tasks_without_dummies)
@@ -342,6 +349,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         :param action: an action
         :return: state, reward, done-flag, info-dict
         """
+        self.start = False
         info = {
             'action': action
         }
@@ -353,7 +361,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             if self.verbose > 1:
                 log.info(f"handling action={action} (Task {task_id})")
             info = {
-                **info,
+                "finish_time": -1,
                 **self._schedule_task(task_id=task_id)
             }
         else:  # case for self.action_mode == 'job'
@@ -377,8 +385,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
         min_length = min([len(route) for m_id, route in self.machine_routes.items()])
         done = min_length == self.n_jobs
 
-        # reward is always 0.0 expect if the jps is scheduled completely
-        reward = 0.0
+        self.time_length = max(self.time_length, info["finish_time"])
+        reward = - self.time_length/self.scaling_divisor if self.scale_reward else - self.time_length
 
         if done:
             try:
@@ -410,6 +418,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         :return: initial state as numpy array.
         """
         # remove machine edges/routes
+        self.start = True
         machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
         self.G.remove_edges_from(machine_edges)
 
@@ -634,7 +643,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.G.add_edge(
             prev_m_task, task_id,
             job_edge=False,
-            weight=prev_m_node['duration']
+            weight=int(prev_m_node['duration'])
         )
         self.machine_routes[m_id] = np.append(self.machine_routes[m_id], task_id)
         st = max(prev_job_node["finish_time"], prev_m_node["finish_time"])
@@ -684,28 +693,30 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         :return: the state of the environment as numpy array.
         """
-        adj = nx.to_numpy_array(self.G)[1:-1, 2:].astype(dtype=int) # remove dummy tasks
+        adj = nx.to_numpy_array(self.G)[1:-1, 1:].astype(dtype=int) # remove dummy tasks
+        print(adj)
         # print(adj)
-        task_to_machine_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=int)
-        task_to_duration_mapping = np.zeros(shape=(self.total_tasks_without_dummies, 1), dtype=self.dtype)
-        for task_id, data in self.G.nodes(data=True):
-            if task_id == self.src_task or task_id == self.sink_task:
-                continue
-            else:
-                # index shift because of the removed dummy tasks
-                task_to_machine_mapping[task_id - 1] = data["machine"]
-                task_to_duration_mapping[task_id - 1] = data["duration"]
+
+        if self.start:
+            for task_id, data in self.G.nodes(data=True):
+                if task_id == self.src_task or task_id == self.sink_task:
+                    continue
+                else:
+                    # index shift because of the removed dummy tasks
+                    self.task_to_machine_mapping[task_id - 1] = data["machine"]
+                    self.task_to_duration_mapping[task_id - 1] = data["duration"]
 
         if self.normalize_observation_space:
             # one hot encoding for task to machine mapping
-            task_to_machine_mapping = task_to_machine_mapping.astype(int).ravel()
-            n_values = np.max(task_to_machine_mapping) + 1
-            task_to_machine_mapping = np.eye(n_values)[task_to_machine_mapping]
+            if self.start:
+                self.task_to_machine_mapping = self.task_to_machine_mapping.astype(int).ravel()
+                n_values = np.max(self.task_to_machine_mapping) + 1
+                self.task_to_machine_mapping = np.eye(n_values)[self.task_to_machine_mapping]
+                self.task_to_duration_mapping = self.task_to_duration_mapping / self.longest_processing_time
             # normalize
             adj = adj / self.longest_processing_time  # note: adj matrix contains weights
-            task_to_duration_mapping = task_to_duration_mapping / self.longest_processing_time
             # merge arrays
-            res = np.concatenate((adj, task_to_machine_mapping, task_to_duration_mapping), axis=1, dtype=self.dtype)
+            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping), axis=1, dtype=self.dtype)
             """
 
             Example:
@@ -804,7 +815,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 [ 0.,  0.,  ...,  0.,  1.,  2.]
             ]
             """
-            res = np.concatenate((adj, task_to_machine_mapping, task_to_duration_mapping), axis=1, dtype=self.dtype)
+            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping), axis=1, dtype=self.dtype)
 
         if self.flat_observation_space:
             # falter observation
