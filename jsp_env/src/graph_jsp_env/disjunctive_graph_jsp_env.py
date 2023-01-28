@@ -15,37 +15,6 @@ from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_visualizer import Disjuncti
 from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 
-def instance_calculator(size):
-    with open(f"./data/{size}.json") as f:
-        data = json.load(f)
-
-        m = int(size[0])
-        if m not in [3, 6, 8]:
-            if m == 1:
-                m = int(size[:2])
-        instance_no = str(np.random.randint(len(data["jssp_identification"])))
-        opt_value = data["optimal_time"][instance_no]
-        jsp_data = data["jobs_data"][instance_no]
-        machine = []
-        duration = []
-        for i in range(len(jsp_data)):
-            c = 0
-            for j in jsp_data[i]:
-                if c % 2 == 0:
-                    machine.append(j)
-                else:
-                    duration.append(j)
-                c += 1
-        machine = list(map(int, machine))
-        duration = list(map(int, duration))
-        print(machine, duration)
-        machine = np.array(machine).reshape(m, m)
-        duration = np.array(duration).reshape(m, m)
-        jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, m)
-
-        return jsp, opt_value
-
-
 class DisjunctiveGraphJspEnv(gym.Env):
 
     metadata = {'render.modes': ['human', 'rgb_array', 'console']}
@@ -73,7 +42,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.info = None
         self.not_valid = None
         self.sum_op = None
-        self.jsp = None
+        self.jsp = env_config["jsp"]
 
         self.env_config = env_config
         self.reward_version = env_config["reward_version"]
@@ -110,7 +79,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         self.verbose = env_config['verbose']
 
-        jps_instance, self.opt_value = instance_calculator(env_config["size"])
+        jps_instance, self.opt_value = self.jsp
 
         if self.scale_reward:
             if env_config["scaling_divisor"] == 0:
@@ -289,11 +258,11 @@ class DisjunctiveGraphJspEnv(gym.Env):
         else:
             scaling_divisor = None
 
-        jps_instance, self.opt_value = instance_calculator(self.env_config["size"])
+        jps_instance, self.opt_value = self.jsp
 
         if jps_instance is not None:
             self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
-        log.info(f"Running the instance: \n {self.jsp} \n with Optimal value: {self.opt_value}")
+        log.info(f"Running the instance: \n {jps_instance} \n with Optimal value: {self.opt_value}")
 
         machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
         self.G.remove_edges_from(machine_edges)

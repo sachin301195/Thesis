@@ -259,42 +259,56 @@ def setup(algo, timestamp):
 #         opt_value = episode.env_config["jps_instance"][-1]
 #         print(name, opt_value)
 #
-# class JspEnv_v1(gym.Env, ABC):
-#     def __init__(self, env_config):
-#         self.jps_instance = env_config['jps_instance']
-#         self.scaling_divisor = env_config['scaling_divisor']
-#         self.scale_reward = env_config['scale_reward']
-#         self.normalize_observation_space = env_config['normalize_observation_space']
-#         self.flat_observation_space = env_config['flat_observation_space']
-#         self.action_mode = env_config['action_mode']
-#         self.perform_left_shift_if_possible = env_config['perform_left_shift_if_possible']
-#         self.verbose = env_config['verbose']
-#         self.env_transform = env_config["env_transform"]
-#
-#         self.env = DisjunctiveGraphJspEnv(jps_instance=self.jps_instance[0],
-#                                           scaling_divisor=self.scaling_divisor,
-#                                           scale_reward=self.scale_reward,
-#                                           perform_left_shift_if_possible=self.perform_left_shift_if_possible,
-#                                           normalize_observation_space=self.normalize_observation_space,
-#                                           flat_observation_space=self.flat_observation_space,
-#                                           action_mode=self.action_mode,
-#                                           env_transform=self.env_transform,
-#                                           verbose=self.verbose)
-#         self.name = "DisjunctiveGraphJspEnv"
-#         self.action_space = self.env.action_space
-#         self.observation_space = self.env.observation_space
-#
-#     def reset(self):
-#
-#         return self.env.reset()
-#
-#     def step(self, action):
-#
-#         return self.env.step(action)
-#
-#     def render(self, mode, show):
-#
-#         return self.env.render(mode=mode, show=show)
+
+def instance_calculator(size):
+    with open(f"./data/{size}.json") as f:
+        data = json.load(f)
+
+        m = int(size[0])
+        if m not in [3, 6, 8]:
+            if m == 1:
+                m = int(size[:2])
+        instance_no = str(np.random.randint(len(data["jssp_identification"])))
+        opt_value = data["optimal_time"][instance_no]
+        jsp_data = data["jobs_data"][instance_no]
+        machine = []
+        duration = []
+        for i in range(len(jsp_data)):
+            c = 0
+            for j in jsp_data[i]:
+                if c % 2 == 0:
+                    machine.append(j)
+                else:
+                    duration.append(j)
+                c += 1
+        machine = list(map(int, machine))
+        duration = list(map(int, duration))
+        print(machine, duration)
+        machine = np.array(machine).reshape(m, m)
+        duration = np.array(duration).reshape(m, m)
+        jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, m)
+
+        return jsp, opt_value
+
+
+class JspEnv_v1(gym.Env, ABC):
+    def __init__(self, env_config):
+        self.env = DisjunctiveGraphJspEnv(env_config)
+        self.name = "DisjunctiveGraphJspEnv"
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+
+    def reset(self):
+
+        return self.env.reset()
+
+    def step(self, action):
+
+        return self.env.step(action)
+
+    def render(self, mode, show):
+
+        return self.env.render(mode=mode, show=show)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -314,7 +328,7 @@ if __name__ == "__main__":
         raise ValueError()
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
-    register_env(f'Dis_jsp_{args.instance_size}', lambda c: DisjunctiveGraphJspEnv(c))
+    register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
     if args.masking == "mask":
         if m == n == 3:
             if args.action_mode == "job":
@@ -355,7 +369,7 @@ if __name__ == "__main__":
                 "vf_share_layers": True
             },
             "env_config": {
-                "size": args.instance_size,
+                "jsp": instance_calculator(args.instance_size),
                 "reward_version": tune.grid_search(["A", "B", "C", "D"]),
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
