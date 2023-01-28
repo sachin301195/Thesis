@@ -282,7 +282,7 @@ def instance_calculator(size):
                 c += 1
         machine = list(map(int, machine))
         duration = list(map(int, duration))
-        print(machine, duration)
+        # print(machine, duration)
         machine = np.array(machine).reshape(m, m)
         duration = np.array(duration).reshape(m, m)
         jsp = np.concatenate((machine, duration), axis=0, dtype="float32").reshape(2, m, m)
@@ -372,8 +372,8 @@ if __name__ == "__main__":
             "disable_env_checking": True,
             "env_config": {
                 "jsp": instance_calculator(args.instance_size),
-                # "reward_version": tune.grid_search(["A", "B", "C", "D"]),
-                "reward_version": "A",
+                "reward_version": tune.grid_search(["A", "B", "C", "D"]),
+                # "reward_version": "A",
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
