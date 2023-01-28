@@ -145,7 +145,7 @@ parser.add_argument(
     help="Normalize obs or not")
 parser.add_argument(
     "--flat-obs",
-    default=False,
+    default=True,
     type=bool,
     help="flatting the obs or not")
 parser.add_argument(
