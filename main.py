@@ -372,7 +372,8 @@ if __name__ == "__main__":
             "disable_env_checking": True,
             "env_config": {
                 "jsp": instance_calculator(args.instance_size),
-                "reward_version": tune.grid_search(["A", "B", "C", "D"]),
+                # "reward_version": tune.grid_search(["A", "B", "C", "D"]),
+                "reward_version": "A",
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
