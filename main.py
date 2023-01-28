@@ -296,7 +296,6 @@ def setup(algo, timestamp):
 #
 #         return self.env.render(mode=mode, show=show)
 
-
 if __name__ == "__main__":
     args = parser.parse_args()
     logger, timestamp = configure_logger()

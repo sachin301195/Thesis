@@ -16,7 +16,7 @@ from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 
 def instance_calculator(size):
-    with open(f"jsp_env/src/graph_jsp_env/data/{size}.json") as f:
+    with open(f"./data/{size}.json") as f:
         data = json.load(f)
 
         m = int(size[0])
