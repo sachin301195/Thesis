@@ -262,7 +262,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         if jps_instance is not None:
             self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
-        log.info(f"Running the instance: \n {self.jsp[0]} \n with Optimal value: {self.opt_value}")
+        # log.info(f"Running the instance: \n {self.jsp[0]} \n with Optimal value: {self.opt_value}")
 
         machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
         self.G.remove_edges_from(machine_edges)
