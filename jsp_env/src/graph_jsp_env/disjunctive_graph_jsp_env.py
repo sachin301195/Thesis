@@ -15,115 +15,42 @@ from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_visualizer import Disjuncti
 from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 
 
+def instance_calculator(size):
+    with open(f"jsp_env/src/graph_jsp_env/data/{size}.json") as f:
+        data = json.load(f)
+
+        m = int(size[0])
+        if m not in [3, 6, 8]:
+            if m == 1:
+                m = int(size[:2])
+        instance_no = str(np.random.randint(len(data["jssp_identification"])))
+        opt_value = data["optimal_time"][instance_no]
+        jsp_data = data["jobs_data"][instance_no]
+        machine = []
+        duration = []
+        for i in range(len(jsp_data)):
+            c = 0
+            for j in jsp_data[i]:
+                if c % 2 == 0:
+                    machine.append(j)
+                else:
+                    duration.append(j)
+                c += 1
+        machine = list(map(int, machine))
+        duration = list(map(int, duration))
+        print(machine, duration)
+        machine = np.array(machine).reshape(m, m)
+        duration = np.array(duration).reshape(m, m)
+        jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, m)
+
+        return jsp, opt_value
+
+
 class DisjunctiveGraphJspEnv(gym.Env):
-    """
-    Custom Environment for the Job Shop Problem (jsp) that follows gym interface.
 
-    This environment is inspired by the
-
-        `The disjunctive graph machine representation of the job shop scheduling problem`
-
-        by Jacek Błażewicz 2000
-
-            https://www.sciencedirect.com/science/article/pii/S0377221799004865
-
-    and
-
-        `Learning to Dispatch for Job Shop Scheduling via Deep Reinforcement Learning`
-
-        by Zhang, Cong, et al. 2020
-
-            https://proceedings.neurips.cc/paper/2020/file/11958dfee29b6709f48a9ba0387a2431-Paper.pdf
-
-            https://github.com/zcaicaros/L2D
-
-    This environment does not explicitly include disjunctive edges, like specified by Jacek Błażewicz,
-    only conjunctive edges. Additional information is saved in the edges and nodes, such that one could construct
-    the disjunctive edges, so the is no loss in information.
-    Moreover, this environment does not implement the graph matrix datastructure by Jacek Błażewicz, since in provides
-    no benefits in chosen the reinforcement learning stetting (for more details have a look at the
-    master thesis).
-
-    This environment is more similar to the Zhang, Cong, et al. implementation.
-    Zhang, Cong, et al. seems to store exclusively time-information exclusively inside nodes
-    (see Figure 2: Example of state transition) and no additional information inside the edges (like weights in the
-    representation of Jacek Błażewicz).
-    However, I had a rough time in understanding the code of Zhang, Cong, et al. 2020, so I might be wrong about that.
-
-    The DisjunctiveGraphJssEnv uses the `networkx` library for graph structure and graph visualization.
-    It is highly configurable and offers a lot of rendering options.
-    """
     metadata = {'render.modes': ['human', 'rgb_array', 'console']}
 
-    def __init__(self, jps_instance: np.ndarray = None, *, reward_version: str = 'A', scaling_divisor: float = None,
-                 scale_reward: bool = True, normalize_observation_space: bool = True,
-                 flat_observation_space: bool = True, dtype: str = "float32",
-                 action_mode: str = "task", env_transform: str = None, perform_left_shift_if_possible: bool = True,
-                 c_map: str = "rainbow", dummy_task_color="tab:gray", default_visualisations: List[str] = None,
-                 visualizer_kwargs: dict = None, verbose: int = 1):
-        """
-
-        :param jsp_instance:
-        :param jps_instance:                    a jsp instance as numpy array
-
-        :param scaling_divisor:                 lower-bound of the jsp or some other scaling number for the reward.
-                                                Only has an effect when `:param scale_reward` is `True`.
-                                                If `None` is specified and `:param scale_reward` is `True` a naive
-                                                lower-bound will be calculated automatically.
-
-                                                If `scaling_divisor` is equal to the optimal makespan, then the (sparse)
-                                                reward will be always smaller or equal to -1.
-
-        :param scale_reward:                    `:param scaling_divisor` is only applied if set to `True`
-
-        :param normalize_observation_space:     If set to `True` all values in the observation space will be between
-                                                0.0 and 1.0.
-                                                This includes an one-hot-encoding of the task-to-machine mapping.
-                                                See `DisjunctiveGraphJssEnv._state_array`
-
-        :param flat_observation_space:          If set to `True` the observation space will be flat. Otherwise, a matrix
-                                                The exact size depends on the jsp size.
-
-        :param dtype:                           the dtype for the observation space. Must follow numpy notation.
-
-        :param action_mode:                     'task' or 'job'. 'task' is default. Specifies weather the
-                                                `action`-argument of the `DisjunctiveGraphJssEnv.step`-method
-                                                corresponds to a job or an task (or node in the graph representation)
-
-                                                Note:
-
-                                                    task actions and node_ids are shifted by 1.
-                                                    So action = 0 corresponds to the node/task 1.
-
-
-        :param perform_left_shift_if_possible:  if the specified task in the `DisjunctiveGraphJssEnv.step`-method can
-                                                fit between two other task without changing their start- and finishing-
-                                                times, the task will be scheduled between them if set to `True`.
-                                                Otherwise, it will be appended at the end.
-                                                Performing a left shift is never a downside in therms of the makespan.
-
-        :param c_map:                           the name of a matplotlib colormap for visualization.
-                                                Default is `rainbow`.
-
-        :param dummy_task_color:                the color that shall be used for the dummy tasks (source and sink task),
-                                                introduced in the graph representation.
-                                                Can be any string that is supported by `networkx`.
-
-        :param default_visualisations:          the visualizations that will be shown by default when calling `render`
-                                                Can be any subset of
-                                                ["gantt_window", "gantt_console", "graph_window", "graph_console"]
-                                                as a list of strings.
-
-                                                    Note:
-                                                    "gantt_window" is computationally expensive operation.
-
-        :param visualizer_kwargs:               additional keyword arguments for
-                                                `jss_graph_env.DisjunctiveGraphJspVisualizer`
-
-        :param verbose:                         0 = no information printed console,
-                                                1 = 'important' printed to console,
-                                                2 = all information printed to console,
-        """
+    def __init__(self, env_config: dict):
         # Note: None-fields will be populated in the 'load_instance' method
         self.size = None
         self.n_jobs = None
@@ -146,56 +73,58 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.info = None
         self.not_valid = None
         self.sum_op = None
+        self.jsp = None
 
-        self.reward_version = reward_version
-        self.scale_reward = scale_reward
+        self.env_config = env_config
+        self.reward_version = env_config["reward_version"]
+        self.scale_reward = env_config["scale_reward"]
         self.time_length = 0
 
         # observation settings
-        self.normalize_observation_space = normalize_observation_space
-        self.flat_observation_space = flat_observation_space
-        self.dtype = dtype
-        # self.start = False
+        self.normalize_observation_space = env_config["normalize_observation_space"]
+        self.flat_observation_space = env_config["flat_observation_space"]
+        self.dtype = env_config["dtype"]
 
         # action setting
-        self.perform_left_shift_if_possible = perform_left_shift_if_possible
-        if action_mode not in ['task', 'job']:
-            raise ValueError(f"only 'task' and 'job' are valid arguments for 'action_mode'. {action_mode} is not.")
-        self.action_mode = action_mode
+        self.perform_left_shift_if_possible = env_config["perform_left_shift_if_possible"]
+        if env_config["action_mode"] not in ['task', 'job']:
+            raise ValueError(f"only 'task' and 'job' are valid arguments for 'action_mode'. {env_config['action_mode']}"
+                             f" is not.")
+        self.action_mode = env_config["action_mode"]
 
-        if env_transform not in [None, 'mask']:
-            raise ValueError(f"only `None` and 'mask' are valid arguments for 'action_mode'. {action_mode} is not.")
-        self.env_transform = env_transform
+        if env_config['env_transform'] not in [None, 'mask']:
+            raise ValueError(f"only `None` and 'mask' are valid arguments for 'env_transform'. "
+                             f"{env_config['env_transform']} is not.")
+        self.env_transform = env_config['env_transform']
 
         # rendering settings
-        self.c_map = c_map
-        if default_visualisations is None:
-            self.default_visualisations = ["gantt_console", "gantt_window", "graph_console", "graph_window"]
-        else:
-            self.default_visualisations = default_visualisations
-        if visualizer_kwargs is None:
-            visualizer_kwargs = {}
+        self.c_map = "rainbow"
+        self.default_visualisations = ["gantt_console", "gantt_window", "graph_console", "graph_window"]
+        visualizer_kwargs = {}
         self.visualizer = DisjunctiveGraphJspVisualizer(**visualizer_kwargs)
 
         # values for dummy tasks nedded for the graph structure
         self.dummy_task_machine = -1
         self.dummy_task_job = -1
-        self.dummy_task_color = dummy_task_color
+        self.dummy_task_color = "tab:gray"
 
-        self.verbose = verbose
+        self.verbose = env_config['verbose']
+
+        jps_instance, self.opt_value = instance_calculator(env_config["size"])
+
+        if self.scale_reward:
+            if env_config["scaling_divisor"] == 0:
+                scaling_divisor = self.opt_value
+            else:
+                scaling_divisor = env_config["scaling_divisor"]
+        else:
+            scaling_divisor = None
 
         if jps_instance is not None:
             self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
 
     def load_instance(self, jsp_instance: np.ndarray, *, scaling_divisor: float = None) -> None:
-        """
-        This loads a jsp instance, sets up the corresponding graph and sets the attributes accordingly.
-
-        :param jsp_instance:        a jsp instance as numpy array
-        :param scaling_divisor:     a lower bound of the makespan of jsp instance or some
-
-        :return:                    None
-        """
+        self.jsp = jsp_instance
         _, n_jobs, n_machines = jsp_instance.shape
         self.size = (n_jobs, n_machines)
         self.n_jobs = n_jobs
@@ -215,11 +144,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
         else:  # action mode 'job'
             self.action_space = gym.spaces.Discrete(self.n_jobs)
 
-        if self.normalize_observation_space:
-            self.observation_space_shape = (self.total_tasks_without_dummies,
-                                            self.total_tasks_without_dummies + self.n_machines + 2)
-        else:
-            self.observation_space_shape = (self.total_tasks_without_dummies, self.total_tasks_without_dummies + 2)
+        self.observation_space_shape = (self.total_tasks_without_dummies,
+                                        self.total_tasks_without_dummies + 5)
 
         if self.flat_observation_space:
             a, b = self.observation_space_shape
@@ -349,13 +275,42 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 weight=self.G.nodes[task_id]['duration']
             )
 
-    def step(self, action: int) -> (np.ndarray, float, bool, dict):
-        """
-        perform an action on the environment. Not valid actions will have no effect.
+    def reset(self):
+        # remove machine edges/routes
+        self.start = True
+        self.not_valid = False
+        self.sum_op = 1
+        self.info = {"finish_time": -1, "makespan": 0}
+        if self.scale_reward:
+            if self.env_config["scaling_divisor"] == 0:
+                scaling_divisor = self.opt_value
+            else:
+                scaling_divisor = self.env_config["scaling_divisor"]
+        else:
+            scaling_divisor = None
 
-        :param action: an action
-        :return: state, reward, done-flag, info-dict
-        """
+        jps_instance, self.opt_value = instance_calculator(self.env_config["size"])
+
+        if jps_instance is not None:
+            self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
+        log.info(f"Running the instance: \n {self.jsp} \n with Optimal value: {self.opt_value}")
+
+        machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
+        self.G.remove_edges_from(machine_edges)
+
+        # reset machine routes dict
+        self.machine_routes = {m_id: np.array([]) for m_id in range(self.n_machines)}
+
+        # remove scheduled flags, reset start_time and finish_time
+        for i in range(1, self.total_tasks_without_dummies + 1):
+            node = self.G.nodes[i]
+            node["scheduled"] = False
+            node["start_time"] = None,
+            node["finish_time"] = None
+
+        return self._state_array(-1)
+
+    def step(self, action: int) -> (np.ndarray, float, bool, dict):
         self.start = False
         self.info = {
             'action': action
@@ -392,12 +347,12 @@ class DisjunctiveGraphJspEnv(gym.Env):
         min_length = min([len(route) for m_id, route in self.machine_routes.items()])
         done = min_length == self.n_jobs
 
-        if not self.info["finish_time"] < 0:
+        if self.info["finish_time"] == -1:
+            self.not_valid = True
+        else:
             self.not_valid = False
             self.time_length = max(self.time_length, self.info["finish_time"])
             self.sum_op += self.info["finish_time"] - self.info["start_time"]
-        else:
-            self.not_valid = True
 
         if done:
             try:
@@ -413,10 +368,11 @@ class DisjunctiveGraphJspEnv(gym.Env):
             reward = - makespan / self.scaling_divisor if self.scale_reward else - makespan
 
             self.info["makespan"] = makespan
+            self.info["optimal_value"] = self.opt_value
             self.info["gantt_df"] = self.network_as_dataframe()
             if self.verbose > 0:
                 log.info(f"makespan: {makespan}, return: {reward:.2f}")
-
+                log.info(f"optimal value: {self.opt_value}")
 
         reward = self._calculate_reward(done)
 
@@ -430,7 +386,10 @@ class DisjunctiveGraphJspEnv(gym.Env):
             reward = - (self.time_length / self.scaling_divisor if self.scale_reward else - self.time_length) * \
                      (not self.not_valid) - 5 * self.not_valid
         elif self.reward_version == "C":
-            reward = - ((self.time_length * self.n_machines)/self.sum_op) * (not self.not_valid) - 5 * self.not_valid
+            try:
+                reward = -(((self.time_length * self.n_machines)/self.sum_op) * (not self.not_valid))-5 * self.not_valid
+            except ZeroDivisionError:
+                pass
         elif self.reward_version == "D":
             reward = (self.time_length - self.info["finish_time"]) * (not self.not_valid) - 5 * self.not_valid
         else:
@@ -439,63 +398,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         return reward
 
-    def reset(self):
-        """
-        resets the environment and returns the initial state.
-
-        :return: initial state as numpy array.
-        """
-        # remove machine edges/routes
-        self.start = True
-        self.not_valid = False
-        self.sum_op = 0
-        self.info = {"finish_time": -1}
-        machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
-        self.G.remove_edges_from(machine_edges)
-
-        # reset machine routes dict
-        self.machine_routes = {m_id: np.array([]) for m_id in range(self.n_machines)}
-
-        # remove scheduled flags, reset start_time and finish_time
-        for i in range(1, self.total_tasks_without_dummies + 1):
-            node = self.G.nodes[i]
-            node["scheduled"] = False
-            node["start_time"] = None,
-            node["finish_time"] = None
-
-        return self._state_array(-1)
-
     def render(self, mode="human", show: List[str] = None, **render_kwargs) -> Union[None, np.ndarray]:
-        """
-        renders the enviorment.
-
-        :param mode:            valid options: "human", "rgb_array", "console"
-
-                                "human" (default)
-
-                                    render the visualisation specified in :param show:
-                                    If :param show:  is `None` `DisjunctiveGraphJssEnv.default_visualisations` will be
-                                    used.
-
-                                "rgb_array"
-
-                                    returns rgb-arrays of the 'window' visualisation specified in
-                                    `DisjunctiveGraphJssEnv.default_visualisations`
-
-                                "console"
-
-                                    prints the 'console' visualisations specified in
-                                    `DisjunctiveGraphJssEnv.default_visualisations` to the console
-
-        :param show:            subset of the available visualisations
-                                ["gantt_window", "gantt_console", "graph_window", "graph_console"]
-                                as list of strings.
-
-        :param render_kwargs:   additional keword arguments for the
-                                `jss_graph_env.DisjunctiveGraphJspVisualizer.render_rgb_array`-method.
-
-        :return:                numpy array if mode="rgb_array" else `None`
-        """
         df = None
         colors = None
 
@@ -538,15 +441,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 return self.visualizer.gantt_chart_rgb_array(df=df, colors=colors)
 
     def _schedule_task(self, task_id: int) -> dict:
-        """
-        schedules a task/node in the graph representation if the task can be scheduled.
-
-        This adding one or multiple corresponding edges (multiple when performing a left shift) and updating the
-        information stored in the nodes.
-
-        :param task_id:     the task or node that shall be scheduled.
-        :return:            a dict with additional information for the `DisjunctiveGraphJssEnv.step`-method.
-        """
         node = self.G.nodes[task_id]
 
         if node["scheduled"]:
@@ -660,15 +554,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
             return self._insert_at_index_0(task_id=task_id, node=node, prev_job_node=prev_job_node, m_id=m_id)
 
     def _append_at_the_end(self, task_id: int, node: dict, prev_job_node: dict, m_id: int) -> dict:
-        """
-        inserts a task at the end (last element) in the `DisjunctiveGraphJssEnv.machine_routes`-dictionary.
-
-        :param task_id:             the id oth the task with in graph representation.
-        :param node:                the corresponding node in the graph (self.G).
-        :param prev_job_node:       the node the is connected to :param node: via a job_edge (job_edge=True).
-        :param m_id:                the id of the machine that corresponds to :param task_id:.
-        :return:                    a dict with additional information for the `DisjunctiveGraphJssEnv.step`-method.
-        """
         prev_m_task = self.machine_routes[m_id][-1]
         prev_m_node = self.G.nodes[prev_m_task]
         self.G.add_edge(
@@ -693,15 +578,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
         }
 
     def _insert_at_index_0(self, task_id: int, node: dict, prev_job_node: dict, m_id: int) -> dict:
-        """
-        inserts a task at index 0 (first element) in the `DisjunctiveGraphJssEnv.machine_routes`-dictionary.
-
-        :param task_id:             the id oth the task with in graph representation.
-        :param node:                the corresponding node in the graph (self.G).
-        :param prev_job_node:       the node the is connected to :param node: via a job_edge (job_edge=True).
-        :param m_id:                the id of the machine that corresponds to :param task_id:.
-        :return:                    a dict with additional information for the `DisjunctiveGraphJssEnv.step`-method.
-        """
         self.machine_routes[m_id] = np.insert(self.machine_routes[m_id], 0, task_id)
         st = prev_job_node["finish_time"]
         ft = st + node["duration"]
@@ -719,11 +595,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
         }
 
     def _state_array(self, task_id) -> np.ndarray:
-        """
-        returns the state of the environment as numpy array.
-
-        :return: the state of the environment as numpy array.
-        """
         adj = nx.to_numpy_array(self.G)[1:-1, 1:].astype(dtype=int)  # remove dummy tasks
         # print(adj)
         if self.start:
@@ -759,104 +630,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             # merge arrays
             res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping, self.task_status),
                                  axis=1, dtype=self.dtype)
-            """
-
-            Example:
-
-            normalize_observation_space = True
-            (flat_observation_space = False)
-
-            jsp: (numpy array)
-            [
-                # jobs order on machine
-                [
-                    [1, 2, 0],      # job 0
-                    [0, 2, 1]       # job 1
-                ],
-                # task durations within a job
-                [
-                    [17, 12, 19],   # task durations of job 0
-                    [8, 6, 2]       # task durations of job 1
-                ]
-
-            ]
-
-            total number of tasks: 6 (2 * 3)
-
-            scaling/normalisation:
-
-                longest_processing_time = 19 (third task of the first job)
-
-            initial observation:
-
-            ┏━━━━━━━━━┳━━━━━━━━┯━━━━━━━━┯━━━━━━┯━━━━━━━━┳━━━━━━━━━━━┯━━━━━━━━━━━┯━━━━━━━━━━━┳━━━━━━━━━━┓
-            ┃         ┃ task_1 │ task_2 │ ...  │ task_6 ┃ machine_0 │ machine_1 │ machine_2 ┃ duration ┃
-            ┣━━━━━━━━━╋━━━━━━━━┿━━━━━━━━┿━━━━━━┿━━━━━━━━╋━━━━━━━━━━━┿━━━━━━━━━━━┿━━━━━━━━━━━╋━━━━━━━━━━┫
-            ┃ task_1  ┃  0.    │ 17/19  │  ... │  0.    ┃    0.     │    0.     │    0.     ┃    17/19 ┃
-            ┠─────────╂────────┼────────┼──────┼────────╂───────────┼───────────┼───────────╂──────────┨
-            ┃ task_2  ┃  0.    │   0.   │  ... │  0.    ┃    0.     │    0.     │    1.     ┃    12/19 ┃
-            ┠─────────╂────────┼────────┼──────┼────────╂───────────┼───────────┼───────────╂──────────┨
-            ┠ ...     ┃  ...   │   ...  │  ... │  ...   ┃       ... │       ... │       ... ┃      ... ┃
-            ┠─────────╂────────┼────────┼──────┼────────╂───────────┼───────────┼───────────╂──────────┨
-            ┃ task_6  ┃  0.    │   0.   │  ... │  0.    ┃    0.     │    1.     │    0.     ┃     2/19 ┃
-            ┗━━━━━━━━━┻━━━━━━━━┷━━━━━━━━┷━━━━━━┷━━━━━━━━┻━━━━━━━━━━━┷━━━━━━━━━━━┷━━━━━━━━━━━┻━━━━━━━━━━┛
-
-            or:
-
-            [
-                [0.        , 0.89473684,     ..., 0.        , 0.        , 1.        ,0.        , 0.89473684],
-                [0.        , 0.        ,     ..., 0.        , 0.        , 0.        ,1.        , 0.63157895],
-                ...
-                [0.        , 0.        ,     ..., 0.        , 0.        , 1.        ,0.        , 0.10526316]
-            ]
-            """
         else:
-            """
-            Example:
-
-            normalize_observation_space = False
-            (flat_observation_space = False)
-
-            jsp: (numpy array)
-            [
-                # jobs order on machine
-                [
-                    [1, 2, 0],      # job 0
-                    [0, 2, 1]       # job 1
-                ],
-                # task durations within a job
-                [
-                    [17, 12, 19],   # task durations of job 0
-                    [8, 6, 2]       # task durations of job 1
-                ]
-
-            ]
-
-            total number of tasks: 6 (2 * 3)
-
-            initial observation:
-
-            ┏━━━━━━━━┳━━━━━━━━┯━━━━━━━━┯━━━━━┯━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
-            ┃        ┃ task_1 │ task_2 │ ... │ task_6  ┃ machine ┃ duration ┃
-            ┣━━━━━━━━╋━━━━━━━━┿━━━━━━━━┿━━━━━┿━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━━┫
-            ┃ task_1 ┃     0. │    17. │ ... │      0. ┃      1. ┃      17. ┃
-            ┠────────╂────────┼────────┼─────┼─────────╂─────────╂──────────┨
-            ┃ task_2 ┃     0. │     0. │ ... │      0. ┃      2. ┃      12. ┃
-            ┠────────╂────────┼────────┼─────┼─────────╂─────────╂──────────┨
-            ┃ ...    ┃    ... │    ... │ ... │     ... ┃     ... ┃       .. ┃
-            ┠────────╂────────┼────────┼─────┼─────────╂─────────╂──────────┨
-            ┃ task_6 ┃     0. │     0. │ ... │      0. ┃      1. ┃       2. ┃
-            ┗━━━━━━━━┻━━━━━━━━┷━━━━━━━━┷━━━━━┷━━━━━━━━━┻━━━━━━━━━┻━━━━━━━━━━┛
-
-            or
-
-            [
-                [ 0., 17.,  ...,  0.,  1., 17.],
-                [ 0.,  0.,  ...,  0.,  2., 12.],
-                ...
-                [ 0.,  0.,  ...,  0.,  1.,  2.]
-            ]
-            """
             res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping, self.task_status),
                                  axis=1, dtype=self.dtype)
 
@@ -873,12 +647,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
         return res
 
     def network_as_dataframe(self) -> pd.DataFrame:
-        """
-        returns the current state of the environment in a format that is supported by Plotly gant charts.
-        (https://plotly.com/python/gantt/)
-
-        :return: the current state as pandas dataframe
-        """
         return pd.DataFrame([
             {
                 'Task': f'Job {data["job"]}',
@@ -891,15 +659,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
         ])
 
     def valid_action_mask(self, action_mode: str = None) -> List[bool]:
-        """
-        returs that indicates which action in the action space is valid (or will have an effect on the environment) and
-        which one is not.
-
-        :param action_mode:     Specifies weather the `action`-argument of the `DisjunctiveGraphJssEnv.step`-method
-                                corresponds to a job or a task (or node in the graph representation)
-
-        :return:                list of boolean in the same shape as the action-space.
-        """
         if action_mode is None:
             action_mode = self.action_mode
 

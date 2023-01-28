@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
 from pathlib import Path
-from main import instance_creator
-from main import JspEnv_v1
+# from main import instance_creator
+# from main import JspEnv_v1
 import random
 import logging
 
@@ -35,32 +35,34 @@ def configure_logger():
 logger = configure_logger()
 agent_save_path = "./agents_runs/random/"
 
-SIZE = "3x3"
 NUM_EPISODES = 10
 REWARDS = []
 MAKESPAN = []
-OPTIMUM_VALUE = {}
+OPTIMUM_VALUE = []
 TRIAL = False
 
 
 if __name__ == "__main__":
-    size = "6x6"
+    size = "3x3"
     c_episode = 1
+    env_config = {
+        "size": size,
+        "scaling_divisor": 100,
+        "scale_reward": True,
+        "dtype": "float32",
+        "action_mode": "task",
+        "env_transform": "mask",
+        "perform_left_shift_if_possible": True,
+        "normalize_observation_space": False,
+        "flat_observation_space": False,
+        "reward_version": "D",
+        "verbose": 2
+    }
+    env = DisjunctiveGraphJspEnv(env_config)
     while c_episode <= NUM_EPISODES:
         c_episode += 1
-        jsp = instance_creator(size, "evaluate")
-
-        env = DisjunctiveGraphJspEnv(jps_instance=jsp[0],
-                                     scaling_divisor=40,
-                                     action_mode="task",
-                                     env_transform="mask",
-                                     perform_left_shift_if_possible=True,
-                                     normalize_observation_space=True,
-                                     flat_observation_space=False,
-                                     verbose=2)
-        OPTIMUM_VALUE[jsp[1]] = jsp[2]
         obs = env.reset()
-        print(nx.to_numpy_array(env.G).astype(dtype=int))
+        print(obs["observations"])
         # nx.draw(env.G, with_labels=True)
         done = False
         # print(nx.to_numpy_array(env.G)[1:-1, 2:].astype(dtype=int))
@@ -69,14 +71,16 @@ if __name__ == "__main__":
         while not done:
             action = env.action_space.sample()
             state, reward, done, info = env.step(action)
+            print(state["observations"])
             score += reward
 
         REWARDS.append(score)
         MAKESPAN.append(info["makespan"])
+        OPTIMUM_VALUE.append(info["optimal_value"])
 
-    plt.scatter(OPTIMUM_VALUE.keys(), MAKESPAN, marker='^')
-    plt.scatter(OPTIMUM_VALUE.keys(), OPTIMUM_VALUE.values(), marker='o')
-    plt.savefig(r"./plots/testPlot.png")
+    # plt.scatter(OPTIMUM_VALUE.keys(), MAKESPAN, marker='^')
+    # plt.scatter(OPTIMUM_VALUE.keys(), OPTIMUM_VALUE.values(), marker='o')
+    # plt.savefig(r"./plots/testPlot.png")
 
 
 

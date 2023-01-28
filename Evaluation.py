@@ -79,7 +79,7 @@ parser.add_argument(
     "--run-type",
     default="evaluate",
     type=str,
-    choices=["train", "test", "trial", "evaluate"],
+    choices=["evaluate_standard", "evaluate"],
     help="Algo running as"
 )
 parser.add_argument(
@@ -153,7 +153,7 @@ parser.add_argument(
     help="Perform left shift if possible or not for the job operations")
 parser.add_argument(
     "--action-mode",
-    default='task',
+    default='job',
     type=str,
     choices=['task', 'job'],
     help="Choose action mode for the env")
@@ -192,8 +192,31 @@ def setup(algo, timestamp):
     return plots_save_path, agent_save_path, best_agent_save_path
 
 
-def evaluate(algo, algo_config: dir, plots_save_path):
-    f = [r"E:\Sachin\agents_runs\PPO\2023-01-13_best_agents\PPO\PPO_Dis_jsp_6x6_f04b9_00005_5_lr=0.0001,vf_loss_coeff=0.0009_2023-01-14_09-54-30\checkpoint_000250\algorithm_state.pkl"]
+def instance_data_formatter(name):
+    with open(f"./instances/{name}") as f:
+        data = f.read()
+    data = data.split()
+    m = int(data[0])
+    n = int(data[1])
+    data = data[2:]
+    machine = []
+    duration = []
+    c = 0
+    for i in data:
+        if c % 2 == 0:
+            machine.append(i)
+        else:
+            duration.append(i)
+        c += 1
+    np.array(machine).reshape(m, n)
+    np.array(duration).reshape(m, n)
+    jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, n)
+
+    return jsp, m, n
+
+
+def evaluate(algo, algo_config: dir, plots_save_path, jsp):
+    f = [r"E:\Sachin\agents_runs\agents_runs\PPO\2023-01-23_best_agents\PPO\PPO_Dis_jsp_6x6_f447d_00000_0_vf_loss_coeff=0.0010_2023-01-23_09-40-21/checkpoint_000500/algorithm_state.pkl"]
     for no, path in enumerate(f):
         if algo == 'PPO':
             agent = ppo.PPO(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
@@ -202,21 +225,53 @@ def evaluate(algo, algo_config: dir, plots_save_path):
         else:
             agent = dqn.DQN(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
         agent.restore(path)
-    logger.info(f"Evaluating algo: {algo} with jsp size: {args.instance_size}")
-    curr_episode = 1
-    max_episode = 10
+    if args.run_type == "evaluate":
+        logger.info(f"Evaluating algo: {algo} with jsp size: {args.instance_size}")
+        curr_episode = 1
+        max_episode = 10
 
-    time_begin = time.time()
-    score_episode = []
-    optimal_value = {}
-    makespan = []
-    while curr_episode <= max_episode:
-        curr_episode += 1
-        jsp = instance_creator(args.instance_size, args.run_type)
-        print(jsp[0].shape)
-        optimal_value[jsp[1]] = jsp[-1]
-        logger.info(f"Evaluating episode: {curr_episode}")
-        logger.info(f"Jsp problem {jsp[1]}, with optimal value {jsp[-1]}: \n {jsp[0]}")
+        time_begin = time.time()
+        score_episode = []
+        optimal_value = {}
+        makespan = []
+        while curr_episode <= max_episode:
+            curr_episode += 1
+            jsp = instance_creator(args.instance_size, args.run_type)
+            optimal_value[jsp[1]] = jsp[-1]
+            logger.info(f"Evaluating episode: {curr_episode}")
+            logger.info(f"Jsp problem {jsp[1]}, with optimal value {jsp[-1]}: \n {jsp[0]}")
+            env_config = {
+                "jps_instance": jsp,
+                "scaling_divisor": args.scaling_divisor,
+                "scale_reward": args.scale_reward,
+                "perform_left_shift_if_possible": args.left_shift,
+                "normalize_observation_space": args.normalize_obs,
+                "flat_observation_space": args.flat_obs,
+                "action_mode": args.action_mode,
+                "env_transform": args.masking,
+                "verbose": args.env_verbose,
+            }
+            env = JspEnv_v1(env_config)
+            obs = env.reset()
+            done = False
+            score = 0
+            step = 0
+            while not done:
+                score_episode.append(score)
+                action = agent.compute_single_action(obs)
+                obs, reward, done, info = env.step(action)
+                score += reward
+                step += 1
+                if len(info) > 0 and done:
+                    logger.info(f"Details: {info}")
+                    makespan.append(info["makespan"])
+
+            env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
+            plt.scatter(optimal_value.keys(), makespan, marker="o")
+            plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
+            plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}_1")
+            # time.sleep(100)
+    else:
         env_config = {
             "jps_instance": jsp,
             "scaling_divisor": args.scaling_divisor,
@@ -234,70 +289,59 @@ def evaluate(algo, algo_config: dir, plots_save_path):
         score = 0
         step = 0
         while not done:
-            score_episode.append(score)
             action = agent.compute_single_action(obs)
             obs, reward, done, info = env.step(action)
             score += reward
             step += 1
             if len(info) > 0 and done:
                 logger.info(f"Details: {info}")
-                makespan.append(info["makespan"])
 
         env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
-        plt.scatter(optimal_value.keys(), makespan, marker="o")
-        plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
-        plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
-        # time.sleep(100)
+        print(info["makespan"])
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     logger, timestamp = configure_logger()
     print(f"Running with following CLI options: {args}")
+    if args.run_type == "evaluate":
+        jsp = instance_creator(args.instance_size, args.run_type)
+        if args.instance_size != "any":
+            if int(args.instance_size[0]) == 1:
+                m = int(args.instance_size[:2])
+                n = int(args.instance_size[3:])
+            else:
+                m = int(args.instance_size[0])
+                n = int(args.instance_size[-1])
+            if args.action_mode == 'task':
+                action_space = m * n
+            else:
+                action_space = m
 
-    if args.instance_size != "any":
-        if int(args.instance_size[0]) == 1:
-            m = int(args.instance_size[:2])
-            n = int(args.instance_size[3:])
-        else:
-            m = int(args.instance_size[0])
-            n = int(args.instance_size[-1])
-        if args.action_mode == 'task':
-            action_space = m * n
-        else:
-            action_space = m
+            if args.normalize_obs:
+                observation_space_shape = (m * n,
+                                           (m * n) + n + 1)
+            else:
+                observation_space_shape = (m * n, (m * n) + 2)
 
-        if args.normalize_obs:
-            observation_space_shape = (m * n,
-                                       (m * n) + n + 1)
+            if args.flat_obs:
+                a, b = observation_space_shape
+                observation_space_shape = (a * b,)
         else:
-            observation_space_shape = (m * n, (m * n) + 2)
-
-        if args.flat_obs:
-            a, b = observation_space_shape
-            observation_space_shape = (a * b,)
+            observation_space_shape = (100,)
+            action_space = 10
+            raise ValueError()
     else:
-        observation_space_shape = (100,)
-        action_space = 10
-        raise ValueError()
+        instance_name = "ta01"
+        jsp = instance_data_formatter(instance_name)
+        m = jsp[1]
+        n = jsp[2]
+        logger.info(f"Evaluating algo: {args.algo} with jsp instance{instance_name} of size {m}x{n}")
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
-    register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(
-        {
-            "jps_instance": instance_creator(args.instance_size, args.run_type),
-            "scaling_divisor": args.scaling_divisor,
-            "scale_reward": args.scale_reward,
-            "perform_left_shift_if_possible": args.left_shift,
-            "normalize_observation_space": args.normalize_obs,
-            "flat_observation_space": args.flat_obs,
-            "action_mode": args.action_mode,
-            "env_transform": args.masking,
-            "verbose": args.env_verbose,
-        }
-    ))
+    register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
 
-
-    if args.masking:
+    if args.action_mode == "masking":
         if m == n == 3 and args.action_mode == "job":
             if args.action_mode == "job":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
@@ -313,11 +357,16 @@ if __name__ == "__main__":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv5)
             else:
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv6)
-        else:
+        elif m == n == 15:
             if args.action_mode == "job":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv7)
             else:
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv8)
+        else:
+            if args.action_mode == "job":
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv9)
+            else:
+                ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv10)
     else:
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionModel)
 
@@ -337,7 +386,7 @@ if __name__ == "__main__":
                 "vf_share_layers": True
             },
             "env_config": {
-                "jps_instance": instance_creator(args.instance_size, args.run_type),
+                "jps_instance": jsp,
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -395,6 +444,6 @@ if __name__ == "__main__":
     # automated run with tune and grid search and Tensorboard
     print("Running manual train loop without Ray Tune")
 
-    evaluate(args.algo, algo_config, plots_save_path)
+    evaluate(args.algo, algo_config, plots_save_path, jsp)
 
     ray.shutdown()

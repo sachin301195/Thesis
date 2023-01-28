@@ -46,7 +46,7 @@ class TorchParametricActionsModelv1(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(117,),
+                 true_obs_shape=(126,),
                  action_embed_size=3,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -101,7 +101,7 @@ class TorchParametricActionsModelv2(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(117,),
+                 true_obs_shape=(126,),
                  action_embed_size=9,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -156,7 +156,7 @@ class TorchParametricActionsModelv3(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(1584,),
+                 true_obs_shape=(1476,),
                  action_embed_size=6,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -201,7 +201,7 @@ class TorchParametricActionsModelv4(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(1584,),
+                 true_obs_shape=(1476,),
                  action_embed_size=36,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -246,7 +246,7 @@ class TorchParametricActionsModelv5(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(11200,),
+                 true_obs_shape=(10500,),
                  action_embed_size=10,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -291,7 +291,7 @@ class TorchParametricActionsModelv6(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(11200,),
+                 true_obs_shape=(10500,),
                  action_embed_size=100,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -336,7 +336,7 @@ class TorchParametricActionsModelv7(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(54450,),
+                 true_obs_shape=(51750,),
                  action_embed_size=15,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -381,7 +381,7 @@ class TorchParametricActionsModelv8(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(54450,),
+                 true_obs_shape=(51750,),
                  action_embed_size=225,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -427,7 +427,7 @@ class TorchParametricActionsModelv9(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(168800,),
+                 true_obs_shape=(162000,),
                  action_embed_size=20,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,
@@ -472,7 +472,7 @@ class TorchParametricActionsModelv10(DQNTorchModel):
                  num_outputs,
                  model_config,
                  name,
-                 true_obs_shape=(168800,),
+                 true_obs_shape=(162000,),
                  action_embed_size=400,
                  **kw):
         DQNTorchModel.__init__(self, obs_space, action_space, num_outputs,

@@ -26,6 +26,8 @@ from ray.rllib.algorithms import a3c
 from ray.rllib.algorithms import dqn
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
+from ray.rllib.algorithms import Algorithm
+from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.models.tf.fcnet import FullyConnectedNetwork
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
@@ -36,6 +38,8 @@ from ray.tune.schedulers import ASHAScheduler
 from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
+from main import JspEnv_v1
+from main import instance_creator
 from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
@@ -57,12 +61,6 @@ def configure_logger():
     return _logger, timestamp
 
 
-BASE_PATH = '.'
-RESULTS_PATH = './results/'
-REWARD_RESULTS_PATH = '/reward-results/'
-AVG_OVR_EP_PATH = '/avg_over_ep-results/'
-CHECKPOINT_ROOT = './checkpoints'
-
 torch, nn = try_import_torch()
 
 parser = argparse.ArgumentParser()
@@ -77,6 +75,13 @@ parser.add_argument(
     action="store_true",
     help="Weather this script should be run as a test: --stop-reward must "
          "be achieved within --stop-timesteps AND --stop-iters")
+parser.add_argument(
+    "--run-type",
+    default="evaluate",
+    type=str,
+    choices=["train", "test", "trial", "evaluate"],
+    help="Algo running as"
+)
 parser.add_argument(
     "--instance-size",
     type=str,
@@ -93,13 +98,6 @@ parser.add_argument(
     type=int,
     default=100000000,
     help="Number of timesteps to train.")
-parser.add_argument(
-    "--run-type",
-    default="train",
-    type=str,
-    choices=["train", "test", "trial", "evaluate"],
-    help="Algo running as"
-)
 parser.add_argument(
     "--eval-tune",
     default=True,
@@ -145,7 +143,7 @@ parser.add_argument(
     help="Normalize obs or not")
 parser.add_argument(
     "--flat-obs",
-    default=False,
+    default=True,
     type=bool,
     help="flatting the obs or not")
 parser.add_argument(
@@ -166,14 +164,14 @@ parser.add_argument(
     help="verbose for the env")
 parser.add_argument(
     "--scaling-divisor",
-    default=40,
+    default=100,
     type=int,
     help="scaling the reward")
 parser.add_argument(
     "--no-of-workers",
-    default=1,
+    default=0,
     type=int,
-    help="scaling the reward")
+    help="number of actors")
 parser.add_argument(
     "--scale-reward",
     default=True,
@@ -182,8 +180,8 @@ parser.add_argument(
 
 
 def setup(algo, timestamp):
-    Path(f'./plots/{algo}').mkdir(parents=True, exist_ok=True)
-    plots_save_path = './plots/' + algo + timestamp
+    Path(f'./plots/{algo}/{timestamp}').mkdir(parents=True, exist_ok=True)
+    plots_save_path = './plots/' + algo + "/" + timestamp
     Path(f'./agents_runs/{algo}//{timestamp}').mkdir(parents=True, exist_ok=True)
     agent_save_path = './agents_runs/' + algo + '/' + timestamp
     best_agent_save_path = './agents_runs/' + algo + '/' + timestamp \
@@ -194,107 +192,70 @@ def setup(algo, timestamp):
     return plots_save_path, agent_save_path, best_agent_save_path
 
 
-# def instance_creator(size, run_type):
-#     if run_type == "train" or run_type == "evaluate":
-#         if size != "any":
-#             with open(f"./data/{size}.json") as f:
-#                 data = json.load(f)
-#         else:
-#             size = np.random.choice(["3x3", "6x6", "8x8", "10x10", "15x15"])
-#             with open(f"./data/{size}.json") as f:
-#                 data = json.load(f)
-#
-#         m = int(size[0])
-#         if m not in [3, 6, 8]:
-#             if m == 1:
-#                 m = int(size[:2])
-#         instance_no = str(np.random.randint(len(data["jssp_identification"])))
-#         name = data["jssp_identification"][instance_no][:-5]
-#         opt_value = data["optimal_time"][instance_no]
-#         jsp_data = data["jobs_data"][instance_no]
-#         machine = []
-#         duration = []
-#         for i in range(len(jsp_data)):
-#             c = 0
-#             for j in jsp_data[i]:
-#                 if c % 2 == 0:
-#                     machine.append(j)
-#                 else:
-#                     duration.append(j)
-#                 c += 1
-#         machine = list(map(int, machine))
-#         duration = list(map(int, duration))
-#         print(machine, duration)
-#         machine = np.array(machine).reshape(m, m)
-#         duration = np.array(duration).reshape(m, m)
-#         jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, m)
-#     else:
-#         jsp = np.array([
-#             [
-#                 [1, 2, 0],  # job 0
-#                 [0, 2, 1]  # job 1
-#             ],
-#             [
-#                 [17, 12, 19],  # task durations of job 0
-#                 [8, 6, 2]  # task durations of job 1
-#             ]
-#         ])
-#         name = "Trail"
-#         opt_value = 48
-#
-#     return jsp, name, opt_value
-#
-#
-# class MyCallbacks(DefaultCallbacks):
-#     def on_episode_end(
-#         self,
-#         *,
-#         worker: RolloutWorker,
-#         base_env: BaseEnv,
-#         policies: Dict[str, Policy],
-#         episode: MultiAgentEpisode,
-#         **kwargs,
-#     ):
-#         name = episode.algo_config["env_config"]["jps_instance"][1]
-#         opt_value = episode.env_config["jps_instance"][-1]
-#         print(name, opt_value)
-#
-# class JspEnv_v1(gym.Env, ABC):
-#     def __init__(self, env_config):
-#         self.jps_instance = env_config['jps_instance']
-#         self.scaling_divisor = env_config['scaling_divisor']
-#         self.scale_reward = env_config['scale_reward']
-#         self.normalize_observation_space = env_config['normalize_observation_space']
-#         self.flat_observation_space = env_config['flat_observation_space']
-#         self.action_mode = env_config['action_mode']
-#         self.perform_left_shift_if_possible = env_config['perform_left_shift_if_possible']
-#         self.verbose = env_config['verbose']
-#         self.env_transform = env_config["env_transform"]
-#
-#         self.env = DisjunctiveGraphJspEnv(jps_instance=self.jps_instance[0],
-#                                           scaling_divisor=self.scaling_divisor,
-#                                           scale_reward=self.scale_reward,
-#                                           perform_left_shift_if_possible=self.perform_left_shift_if_possible,
-#                                           normalize_observation_space=self.normalize_observation_space,
-#                                           flat_observation_space=self.flat_observation_space,
-#                                           action_mode=self.action_mode,
-#                                           env_transform=self.env_transform,
-#                                           verbose=self.verbose)
-#         self.name = "DisjunctiveGraphJspEnv"
-#         self.action_space = self.env.action_space
-#         self.observation_space = self.env.observation_space
-#
-#     def reset(self):
-#
-#         return self.env.reset()
-#
-#     def step(self, action):
-#
-#         return self.env.step(action)
-#
-#     def render(self, mode, show):
-#
-#         return self.env.render(mode=mode, show=show)
+def evaluate(algo, algo_config: dir, plots_save_path):
+    f = [r"E:\Sachin\agents_runs\agents_runs\PPO\2023-01-23_best_agents\PPO\PPO_Dis_jsp_6x6_f447d_00001_1_vf_loss_coeff=0.0000_2023-01-23_11-28-17\checkpoint_000500\algorithm_state.pkl"]
+    for no, path in enumerate(f):
+        if algo == 'PPO':
+            agent = ppo.PPO(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
+        elif algo == 'A3C':
+            agent = a3c.A3C(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
+        else:
+            agent = dqn.DQN(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
+        agent.restore(path)
+    logger.info(f"Evaluating algo: {algo} with jsp size: {args.instance_size}")
+    curr_episode = 1
+    max_episode = 100
+
+    time_begin = time.time()
+    score_episode = []
+    optimal_value = {}
+    makespan = []
+    while curr_episode <= max_episode:
+        jsp = instance_creator(args.instance_size, args.run_type)
+        print(jsp[0].shape)
+        optimal_value[jsp[1]] = jsp[-1]
+        logger.info(f"Evaluating episode: {curr_episode}")
+        logger.info(f"Jsp problem {jsp[1]}, with optimal value {jsp[-1]}: \n {jsp[0]}")
+        env_config = {
+            "jps_instance": jsp,
+            "scaling_divisor": args.scaling_divisor,
+            "scale_reward": args.scale_reward,
+            "perform_left_shift_if_possible": args.left_shift,
+            "normalize_observation_space": args.normalize_obs,
+            "flat_observation_space": args.flat_obs,
+            "action_mode": args.action_mode,
+            "env_transform": args.masking,
+            "verbose": args.env_verbose,
+        }
+        env = JspEnv_v1(env_config)
+        obs = env.reset()
+        done = False
+        score = 0
+        step = 0
+        while not done:
+            score_episode.append(score)
+            action = agent.compute_single_action(obs)
+            obs, reward, done, info = env.step(action)
+            score += reward
+            step += 1
+            if len(info) > 0 and done:
+                logger.info(f"Details: {info}")
+                makespan.append(info["makespan"])
+
+        env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
+        curr_episode += 1
+
+    makespan_avg = sum(makespan)/max_episode
+    optimal_value_avg = sum(list(optimal_value.values()))/max_episode
+    error = 100 - (makespan_avg - optimal_value_avg)/optimal_value_avg*100
+    print("makespan_avg: ", makespan_avg)
+    print("optimal_value_avg: ", optimal_value_avg)
+    print("Gap %: ", error)
+
+    plt.scatter(optimal_value.keys(), makespan, marker="o")
+    plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
+    plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
+        # time.sleep(100)
 
 
 if __name__ == "__main__":
@@ -309,15 +270,43 @@ if __name__ == "__main__":
         else:
             m = int(args.instance_size[0])
             n = int(args.instance_size[-1])
+        if args.action_mode == 'task':
+            action_space = m * n
+        else:
+            action_space = m
+
+        if args.normalize_obs:
+            observation_space_shape = (m * n,
+                                       (m * n) + n + 1)
+        else:
+            observation_space_shape = (m * n, (m * n) + 2)
+
+        if args.flat_obs:
+            a, b = observation_space_shape
+            observation_space_shape = (a * b,)
     else:
         observation_space_shape = (100,)
         action_space = 10
         raise ValueError()
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
-    register_env(f'Dis_jsp_{args.instance_size}', lambda c: DisjunctiveGraphJspEnv(c))
-    if args.masking == "mask":
-        if m == n == 3:
+    register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(
+        {
+            "jps_instance": instance_creator(args.instance_size, args.run_type),
+            "scaling_divisor": args.scaling_divisor,
+            "scale_reward": args.scale_reward,
+            "perform_left_shift_if_possible": args.left_shift,
+            "normalize_observation_space": args.normalize_obs,
+            "flat_observation_space": args.flat_obs,
+            "action_mode": args.action_mode,
+            "env_transform": args.masking,
+            "verbose": args.env_verbose,
+        }
+    ))
+
+
+    if args.masking:
+        if m == n == 3 and args.action_mode == "job":
             if args.action_mode == "job":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
             else:
@@ -356,8 +345,7 @@ if __name__ == "__main__":
                 "vf_share_layers": True
             },
             "env_config": {
-                "size": args.instance_size,
-                "reward_version": tune.grid_search(["A", "B", "C", "D"]),
+                "jps_instance": instance_creator(args.instance_size, args.run_type),
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -366,7 +354,6 @@ if __name__ == "__main__":
                 "action_mode": args.action_mode,
                 "env_transform": args.masking,
                 "verbose": args.env_verbose,
-                "dtype": "float32",
             },
             "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
             "num_workers": args.no_of_workers,  # parallelism
@@ -375,11 +362,11 @@ if __name__ == "__main__":
             "train_batch_size": 4000,
             # "sgd_minibatch_size": 512,
             # "num_sgd_iter": 20,
-            # "vf_loss_coeff": 0.0005,
-            "vf_loss_coeff": tune.grid_search([0.001, 0.00001]),
+            "vf_loss_coeff": 0.0005,
+            # "vf_loss_coeff": tune.grid_search([0.0005, 0.0009]),
             # "vf_clip_param": 10,
-            "lr": 0.00001,
-            # "lr": 0.0001,
+            # "lr": tune.grid_search([0.001, 0.0001])
+            "lr": 0.0001,
             # "callbacks": MyCallbacks,
             # "optimizer": "SGD",
             # "entropy_coeff": tune.grid_search([tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
@@ -414,19 +401,8 @@ if __name__ == "__main__":
     plots_save_path, agent_save_path, best_agent_save_path = setup(args.algo, timestamp)
 
     # automated run with tune and grid search and Tensorboard
-    print("Training with Ray Tune.")
-    print('...............................................................................\n'
-          '\n\n\t\t\t\t\t\t\t\t Training Starts Here\n\n\n......................................')
-    # result = tune.run(curriculum_learning, config=algo_config, local_dir=best_agent_save_path, log_to_file=True,
-    #                   checkpoint_at_end=True, checkpoint_freq=50, reuse_actors=False, verbose=3,
-    #                   checkpoint_score_attr='min-episode_len_mean',
-    #                   resources_per_trial=ppo.PPOTrainer.default_resource_request(algo_config))
-    # , resources_per_trial = ppo.PPOTrainer.default_resource_request(algo_config)
-    result = tune.run(args.algo, config=algo_config, local_dir=best_agent_save_path, log_to_file=True,
-                      checkpoint_at_end=True, checkpoint_freq=50, reuse_actors=False, verbose=3,
-                      checkpoint_score_attr='min-episode_len_mean', stop=stop)
-    logger.info(result)
-    print('...............................................................................\n'
-          '\n\n\t\t\t\t\t\t\t\t Training Ends Here\n\n\n........................................')
+    print("Running manual train loop without Ray Tune")
+
+    evaluate(args.algo, algo_config, plots_save_path)
 
     ray.shutdown()
