@@ -55,8 +55,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
     """
     metadata = {'render.modes': ['human', 'rgb_array', 'console']}
 
-    def __init__(self, jps_instance: np.ndarray = None, *, scaling_divisor: float = None, scale_reward: bool = True,
-                 normalize_observation_space: bool = True, flat_observation_space: bool = True, dtype: str = "float32",
+    def __init__(self, jps_instance: np.ndarray = None, *, reward_version: str = 'A', scaling_divisor: float = None,
+                 scale_reward: bool = True, normalize_observation_space: bool = True,
+                 flat_observation_space: bool = True, dtype: str = "float32",
                  action_mode: str = "task", env_transform: str = None, perform_left_shift_if_possible: bool = True,
                  c_map: str = "rainbow", dummy_task_color="tab:gray", default_visualisations: List[str] = None,
                  visualizer_kwargs: dict = None, verbose: int = 1):
@@ -141,7 +142,12 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.task_to_duration_mapping = None
         self.task_to_machine_mapping = None
         self.start = None
+        self.task_status = None
+        self.info = None
+        self.not_valid = None
+        self.sum_op = None
 
+        self.reward_version = reward_version
         self.scale_reward = scale_reward
         self.time_length = 0
 
@@ -351,7 +357,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         :return: state, reward, done-flag, info-dict
         """
         self.start = False
-        info = {
+        self.info = {
             'action': action
         }
 
@@ -361,7 +367,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
             if self.verbose > 1:
                 log.info(f"handling action={action} (Task {task_id})")
-            info = {
+            self.info = {
                 "finish_time": -1,
                 **self._schedule_task(task_id=task_id)
             }
@@ -372,13 +378,13 @@ class DisjunctiveGraphJspEnv(gym.Env):
             if True not in job_mask:
                 if self.verbose > 0:
                     log.info(f"job {action} is already completely scheduled. Ignoring it.")
-                info["valid_action"] = False
+                self.info["valid_action"] = False
             else:
                 task_id = 1 + action * self.n_machines + np.argmax(job_mask)
                 if self.verbose > 1:
                     log.info(f"handling job={action} (Task {task_id})")
-                info = {
-                    **info,
+                self.info = {
+                    "finish_time": -1,
                     **self._schedule_task(task_id=task_id)
                 }
 
@@ -386,8 +392,12 @@ class DisjunctiveGraphJspEnv(gym.Env):
         min_length = min([len(route) for m_id, route in self.machine_routes.items()])
         done = min_length == self.n_jobs
 
-        self.time_length = max(self.time_length, info["finish_time"])
-        reward = - self.time_length / self.scaling_divisor if self.scale_reward else - self.time_length
+        if not self.info["finish_time"] < 0:
+            self.not_valid = False
+            self.time_length = max(self.time_length, self.info["finish_time"])
+            self.sum_op += self.info["finish_time"] - self.info["start_time"]
+        else:
+            self.not_valid = True
 
         if done:
             try:
@@ -402,15 +412,32 @@ class DisjunctiveGraphJspEnv(gym.Env):
             makespan = nx.dag_longest_path_length(self.G)
             reward = - makespan / self.scaling_divisor if self.scale_reward else - makespan
 
-            info["makespan"] = makespan
-            info["gantt_df"] = self.network_as_dataframe()
+            self.info["makespan"] = makespan
+            self.info["gantt_df"] = self.network_as_dataframe()
             if self.verbose > 0:
                 log.info(f"makespan: {makespan}, return: {reward:.2f}")
 
-        info["scaling_divisor"] = self.scaling_divisor
 
-        state = self._state_array()
-        return state, reward, done, info
+        reward = self._calculate_reward(done)
+
+        self.info["scaling_divisor"] = self.scaling_divisor
+
+        state = self._state_array(action)
+        return state, reward, done, self.info
+
+    def _calculate_reward(self, done):
+        if self.reward_version == 'B':
+            reward = - (self.time_length / self.scaling_divisor if self.scale_reward else - self.time_length) * \
+                     (not self.not_valid) - 5 * self.not_valid
+        elif self.reward_version == "C":
+            reward = - ((self.time_length * self.n_machines)/self.sum_op) * (not self.not_valid) - 5 * self.not_valid
+        elif self.reward_version == "D":
+            reward = (self.time_length - self.info["finish_time"]) * (not self.not_valid) - 5 * self.not_valid
+        else:
+            reward = - (self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"]) \
+                     * done - 5 * self.not_valid
+
+        return reward
 
     def reset(self):
         """
@@ -420,6 +447,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
         """
         # remove machine edges/routes
         self.start = True
+        self.not_valid = False
+        self.sum_op = 0
+        self.info = {"finish_time": -1}
         machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
         self.G.remove_edges_from(machine_edges)
 
@@ -433,7 +463,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             node["start_time"] = None,
             node["finish_time"] = None
 
-        return self._state_array()
+        return self._state_array(-1)
 
     def render(self, mode="human", show: List[str] = None, **render_kwargs) -> Union[None, np.ndarray]:
         """
@@ -557,14 +587,14 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 if j_lower_bound_ft <= first_task_on_machine_st:
                     # schedule task as first node on machine
                     # self.render(show=["gantt_console"])
-                    info = self._insert_at_index_0(task_id=task_id, node=node, prev_job_node=prev_job_node, m_id=m_id)
+                    self.info = self._insert_at_index_0(task_id=task_id, node=node, prev_job_node=prev_job_node, m_id=m_id)
                     self.G.add_edge(
                         task_id, m_first,
                         job_edge=False,
                         weight=duration
                     )
                     # self.render(show=["gantt_console"])
-                    return info
+                    return self.info
                 elif len_m_routes == 1:
                     return self._append_at_the_end(task_id=task_id, node=node, prev_job_node=prev_job_node, m_id=m_id)
 
@@ -688,7 +718,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             "left_shift": 0,
         }
 
-    def _state_array(self) -> np.ndarray:
+    def _state_array(self, task_id) -> np.ndarray:
         """
         returns the state of the environment as numpy array.
 
@@ -705,20 +735,29 @@ class DisjunctiveGraphJspEnv(gym.Env):
                     continue
                 else:
                     # index shift because of the removed dummy tasks
-                    self.task_to_machine_mapping[task_id - 1] = data["machine"]
+                    self.task_to_machine_mapping[task_id - 1] = data["machine"] + 1
                     self.task_to_duration_mapping[task_id - 1] = data["duration"]
+
+            self.task_status = np.zeros((self.total_tasks_without_dummies, 2), dtype=self.dtype)
+
+        if task_id >= 0 and self.info["finish_time"] > 0:
+            self.task_status[task_id][1] = 1.0
+            self.task_status[task_id][0] = self.info["finish_time"]
 
         if self.normalize_observation_space:
             # one hot encoding for task to machine mapping
             if self.start:
-                self.task_to_machine_mapping = self.task_to_machine_mapping.astype(int).ravel()
-                n_values = np.max(self.task_to_machine_mapping) + 1
-                self.task_to_machine_mapping = np.eye(n_values)[self.task_to_machine_mapping]
+                # self.task_to_machine_mapping = self.task_to_machine_mapping.astype(int).ravel()
+                # n_values = np.max(self.task_to_machine_mapping) + 1
+                # self.task_to_machine_mapping = np.eye(n_values)[self.task_to_machine_mapping]
+                self.task_to_machine_mapping = self.task_to_machine_mapping / self.n_machines
                 self.task_to_duration_mapping = self.task_to_duration_mapping / self.longest_processing_time
             # normalize
             adj = adj / self.longest_processing_time  # note: adj matrix contains weights
+            if task_id >= 0 and self.info["finish_time"] > 0:
+                self.task_status[task_id][0] /= self.scaling_divisor
             # merge arrays
-            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping),
+            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping, self.task_status),
                                  axis=1, dtype=self.dtype)
             """
 
@@ -818,7 +857,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 [ 0.,  0.,  ...,  0.,  1.,  2.]
             ]
             """
-            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping),
+            res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping, self.task_status),
                                  axis=1, dtype=self.dtype)
 
         if self.flat_observation_space:
