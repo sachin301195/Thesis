@@ -282,7 +282,7 @@ def instance_calculator(size):
                 c += 1
         machine = list(map(int, machine))
         duration = list(map(int, duration))
-        # print(machine, duration)
+        print(machine, duration)
         machine = np.array(machine).reshape(m, m)
         duration = np.array(duration).reshape(m, m)
         jsp = np.concatenate((machine, duration), axis=0, dtype="float32").reshape(2, m, m)
@@ -417,9 +417,9 @@ if __name__ == "__main__":
         if args.lstm:
             algo_config['model']['use_lstm'] = True
             algo_config['model']['lstm_cell_size'] = 64
-        algo_config['evaluation_interval'] = args.eval_interval
+        # algo_config['evaluation_interval'] = args.eval_interval
         # algo_config['evaluation_duration'] = 10
-        algo_config["evaluation_parallel_to_training"]: True
+        # algo_config["evaluation_parallel_to_training"]: True
     else:
         algo_config = None
 
