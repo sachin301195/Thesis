@@ -93,7 +93,6 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
 
     def load_instance(self, jsp_instance: np.ndarray, *, scaling_divisor: float = None) -> None:
-        self.jsp = jsp_instance
         _, n_jobs, n_machines = jsp_instance.shape
         self.size = (n_jobs, n_machines)
         self.n_jobs = n_jobs
