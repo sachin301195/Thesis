@@ -131,7 +131,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 "action_mask": gym.spaces.Box(0, 1, shape=(self.action_space.n,), dtype=np.int32),
                 "observations": gym.spaces.Box(
                     low=0.0,
-                    high=1.0 if self.normalize_observation_space else jsp_instance.max(),
+                    high=10.0 if self.normalize_observation_space else jsp_instance.max(),
                     shape=self.observation_space_shape,
                     dtype=self.dtype)
             })
