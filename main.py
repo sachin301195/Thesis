@@ -282,7 +282,7 @@ def instance_calculator(size):
                 c += 1
         machine = list(map(int, machine))
         duration = list(map(int, duration))
-        print(machine, duration)
+        # print(machine, duration)
         machine = np.array(machine).reshape(m, m)
         duration = np.array(duration).reshape(m, m)
         jsp = np.concatenate((machine, duration), axis=0, dtype="float32").reshape(2, m, m)
