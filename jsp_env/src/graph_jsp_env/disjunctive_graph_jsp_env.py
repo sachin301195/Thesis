@@ -39,7 +39,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.task_to_machine_mapping = None
         self.start = None
         self.task_status = None
-        self.info = None
+        self.info = {"makespan": 0, "finish_time": -1}
         self.not_valid = None
         self.sum_op = None
         self.jsp = env_config["jsp"]
