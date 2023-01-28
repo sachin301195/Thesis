@@ -358,14 +358,16 @@ class DisjunctiveGraphJspEnv(gym.Env):
                      (not self.not_valid) - 5 * self.not_valid
         elif self.reward_version == "C":
             try:
-                reward = -(((self.time_length * self.n_machines)/self.sum_op) * (not self.not_valid))-5 * self.not_valid
+                reward = -((((self.time_length * self.n_machines)/self.sum_op) / self.scaling_divisor)
+                           * (not self.not_valid)) - 5 * self.not_valid
             except ZeroDivisionError:
                 pass
         elif self.reward_version == "D":
-            reward = (self.time_length - self.info["finish_time"]) * (not self.not_valid) - 5 * self.not_valid
+            reward = ((self.time_length - self.info["finish_time"]) / self.scaling_divisor) \
+                     * (not self.not_valid) - 5 * self.not_valid
         else:
-            reward =-(self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"])*done\
-                    - 5 * self.not_valid
+            reward = - (self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"])\
+                     * done - 5 * self.not_valid
 
         return reward
 
