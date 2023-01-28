@@ -351,6 +351,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         return state, reward, done, self.info
 
     def _calculate_reward(self, done):
+        global reward
         if self.reward_version == 'B':
             reward = - (self.time_length / self.scaling_divisor if self.scale_reward else - self.time_length) * \
                      (not self.not_valid) - 5 * self.not_valid
@@ -362,8 +363,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
         elif self.reward_version == "D":
             reward = (self.time_length - self.info["finish_time"]) * (not self.not_valid) - 5 * self.not_valid
         else:
-            reward = - (self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"]) \
-                     * done - 5 * self.not_valid
+            reward =-(self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"])*done\
+                    - 5 * self.not_valid
 
         return reward
 
