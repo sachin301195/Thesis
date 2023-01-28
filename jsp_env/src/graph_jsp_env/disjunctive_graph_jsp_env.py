@@ -322,6 +322,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.not_valid = False
             self.time_length = max(self.time_length, self.info["finish_time"])
             self.sum_op += self.info["finish_time"] - self.info["start_time"]
+            self.info["makespan"] = 0
 
         if done:
             try:
