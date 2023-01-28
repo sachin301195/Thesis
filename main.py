@@ -261,7 +261,7 @@ def setup(algo, timestamp):
 #
 
 def instance_calculator(size):
-    with open(f"jsp_env/src/graph_jsp_env/data/{size}.json") as f:
+    with open(f"./data/{size}.json") as f:
         data = json.load(f)
         m = int(size[0])
         if m not in [3, 6, 8]:
