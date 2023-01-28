@@ -300,8 +300,8 @@ class JspEnv_v1(gym.Env, ABC):
         self.observation_space = self.env.observation_space
 
     def reset(self):
-
-        return self.env.reset()
+        jsp = instance_calculator(args.instance_size)
+        return self.env.reset(jsp)
 
     def step(self, action):
 
@@ -310,6 +310,7 @@ class JspEnv_v1(gym.Env, ABC):
     def render(self, mode, show):
 
         return self.env.render(mode=mode, show=show)
+
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -369,6 +370,7 @@ if __name__ == "__main__":
                 "custom_model": f'Dis_jsp_{args.instance_size}',
                 "vf_share_layers": True
             },
+            "disable_env_checking": True,
             "env_config": {
                 "jsp": instance_calculator(args.instance_size),
                 "reward_version": tune.grid_search(["A", "B", "C", "D"]),

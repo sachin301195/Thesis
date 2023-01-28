@@ -243,12 +243,13 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 weight=self.G.nodes[task_id]['duration']
             )
 
-    def reset(self):
+    def reset(self, jsp):
         # remove machine edges/routes
         self.start = True
         self.not_valid = False
         self.sum_op = 1
-        self.info = {"finish_time": -1, "makespan": 0}
+        self.info = {"finish_time": -1,
+                     "makespan": 0}
         if self.scale_reward:
             if self.env_config["scaling_divisor"] == 0:
                 scaling_divisor = self.opt_value
@@ -257,10 +258,10 @@ class DisjunctiveGraphJspEnv(gym.Env):
         else:
             scaling_divisor = None
 
-        # jps_instance, self.opt_value = self.jsp
-        #
-        # if jps_instance is not None:
-        #     self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
+        jps_instance, self.opt_value = jsp
+
+        if jps_instance is not None:
+            self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
         log.info(f"Running the instance: \n {self.jsp[0]} \n with Optimal value: {self.opt_value}")
 
         machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
