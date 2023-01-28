@@ -263,7 +263,6 @@ def setup(algo, timestamp):
 def instance_calculator(size):
     with open(f"jsp_env/src/graph_jsp_env/data/{size}.json") as f:
         data = json.load(f)
-
         m = int(size[0])
         if m not in [3, 6, 8]:
             if m == 1:
@@ -286,7 +285,7 @@ def instance_calculator(size):
         print(machine, duration)
         machine = np.array(machine).reshape(m, m)
         duration = np.array(duration).reshape(m, m)
-        jsp = np.concatenate((machine, duration), axis=0).reshape(2, m, m)
+        jsp = np.concatenate((machine, duration), axis=0, dtype="float32").reshape(2, m, m)
         print(jsp)
 
         return jsp, opt_value
