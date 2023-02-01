@@ -9,6 +9,8 @@ from pathlib import Path
 import random
 import logging
 
+from evaluate import evaluate_instance
+
 import json
 import time
 import networkx as nx
@@ -44,24 +46,26 @@ TRIAL = False
 
 if __name__ == "__main__":
     size = "3x3"
-    c_episode = 1
-    env_config = {
-        "size": size,
-        "scaling_divisor": 100,
-        "scale_reward": True,
-        "dtype": "float32",
-        "action_mode": "task",
-        "env_transform": "mask",
-        "perform_left_shift_if_possible": True,
-        "normalize_observation_space": False,
-        "flat_observation_space": False,
-        "reward_version": "D",
-        "verbose": 2
-    }
-    env = DisjunctiveGraphJspEnv(env_config)
+    c_episode = 0
     while c_episode <= NUM_EPISODES:
+        jsp = evaluate_instance(size, c_episode)
+        env_config = {
+            "jsp": jsp,
+            "reward_version": "A",
+            # "reward_version": "A",
+            "scaling_divisor": 100,
+            "scale_reward": True,
+            "perform_left_shift_if_possible": True,
+            "normalize_observation_space": False,
+            "flat_observation_space": False,
+            "action_mode": "task",
+            "env_transform": "mask",
+            "verbose": 2,
+            "dtype": "float32",
+        }
+        env = DisjunctiveGraphJspEnv(env_config)
         c_episode += 1
-        obs = env.reset()
+        obs = env.reset(jsp)
         print(obs["observations"])
         # nx.draw(env.G, with_labels=True)
         done = False

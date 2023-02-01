@@ -39,13 +39,22 @@ from ray.tune.logger import pretty_print
 from ray.tune.registry import register_env
 from jsp_env.src.graph_jsp_env.disjunctive_graph_jsp_env import DisjunctiveGraphJspEnv
 from main import JspEnv_v1
-from main import instance_creator
+# from main import instance_creator
 from jsp_env.src.graph_jsp_env.disjunctive_graph_logger import log
 from ray.rllib.evaluation import MultiAgentEpisode, RolloutWorker
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.env import BaseEnv
 from ray.rllib.policy import Policy
 from ray.rllib.policy.sample_batch import SampleBatch
+
+EVALUATE = [120,  12, 278, 797, 230, 692, 917, 565, 301, 844,  68, 930, 851,
+            464, 621, 307, 674, 206, 106, 840, 730, 489, 680, 742, 280, 667,
+            998, 810, 621, 162, 962, 709, 467, 760, 426, 442, 716,  11, 262,
+            665, 808, 661, 373, 956, 223, 985, 449, 293, 856, 500, 725, 641,
+            167, 339, 898, 534, 450, 150, 906, 303, 319, 755, 240, 953,  28,
+            661, 558, 632, 356, 199, 891, 747, 352, 560, 830, 319, 231,  91,
+            752, 271, 244, 466, 920, 189, 818, 370, 873, 809, 209, 128, 972,
+            477, 827, 375, 794, 454, 284, 256, 757, 678]
 
 
 def configure_logger():
@@ -192,8 +201,38 @@ def setup(algo, timestamp):
     return plots_save_path, agent_save_path, best_agent_save_path
 
 
+def evaluate_instance(size, no):
+    with open(f"./data/{size}.json") as f:
+        data = json.load(f)
+        instance_no = EVALUATE[no]
+        opt_value = data["optimal_time"][str(instance_no)]
+        jsp_data = data["jobs_data"][str(instance_no)]
+        m = int(size[0])
+        if m not in [3, 6, 8]:
+            if m == 1:
+                m = int(size[:2])
+        machine = []
+        duration = []
+        for i in range(len(jsp_data)):
+            c = 0
+            for j in jsp_data[i]:
+                if c % 2 == 0:
+                    machine.append(j)
+                else:
+                    duration.append(j)
+                c += 1
+        machine = list(map(int, machine))
+        duration = list(map(int, duration))
+        # print(machine, duration)
+        machine = np.array(machine).reshape(m, m)
+        duration = np.array(duration).reshape(m, m)
+        jsp = np.concatenate((machine, duration), axis=0, dtype=int).reshape(2, m, m)
+
+    return jsp, opt_value
+
+
 def evaluate(algo, algo_config: dir, plots_save_path):
-    f = [r"E:\Sachin\agents_runs\agents_runs\PPO\2023-01-23_best_agents\PPO\PPO_Dis_jsp_6x6_f447d_00001_1_vf_loss_coeff=0.0000_2023-01-23_11-28-17\checkpoint_000500\algorithm_state.pkl"]
+    f = [r"E:\Sachin\agents_runs\agents_runs\PPO\2023-01-28_best_agents\PPO\PPO_Dis_jsp_6x6_31806_00004_4_reward_version=A,vf_loss_coeff=0.0000_2023-01-29_03-29-44\checkpoint_000050\algorithm_state.pkl"]
     for no, path in enumerate(f):
         if algo == 'PPO':
             agent = ppo.PPO(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
@@ -203,21 +242,21 @@ def evaluate(algo, algo_config: dir, plots_save_path):
             agent = dqn.DQN(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
         agent.restore(path)
     logger.info(f"Evaluating algo: {algo} with jsp size: {args.instance_size}")
-    curr_episode = 1
-    max_episode = 100
+    curr_episode = 0
+    max_episode = 10
 
     time_begin = time.time()
     score_episode = []
-    optimal_value = {}
+    optimal_value = []
     makespan = []
-    while curr_episode <= max_episode:
-        jsp = instance_creator(args.instance_size, args.run_type)
+    while curr_episode < max_episode:
+        jsp = evaluate_instance(args.instance_size, curr_episode)
         print(jsp[0].shape)
-        optimal_value[jsp[1]] = jsp[-1]
         logger.info(f"Evaluating episode: {curr_episode}")
-        logger.info(f"Jsp problem {jsp[1]}, with optimal value {jsp[-1]}: \n {jsp[0]}")
+        logger.info(f"Jsp problem {jsp[0]}, with optimal value \n {jsp[1]}")
         env_config = {
-            "jps_instance": jsp,
+            "jsp": jsp,
+            "reward_version": "A",
             "scaling_divisor": args.scaling_divisor,
             "scale_reward": args.scale_reward,
             "perform_left_shift_if_possible": args.left_shift,
@@ -226,9 +265,10 @@ def evaluate(algo, algo_config: dir, plots_save_path):
             "action_mode": args.action_mode,
             "env_transform": args.masking,
             "verbose": args.env_verbose,
+            "dtype": "float32",
         }
-        env = JspEnv_v1(env_config)
-        obs = env.reset()
+        env = DisjunctiveGraphJspEnv(env_config=env_config)
+        obs = env.reset(jsp)
         done = False
         score = 0
         step = 0
@@ -239,24 +279,45 @@ def evaluate(algo, algo_config: dir, plots_save_path):
             score += reward
             step += 1
             if len(info) > 0 and done:
-                logger.info(f"Details: {info}")
+                # logger.info(f"Details: {info}")
                 makespan.append(info["makespan"])
+                optimal_value.append(info["optimal_value"])
 
-        env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
+        # env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
         curr_episode += 1
 
     makespan_avg = sum(makespan)/max_episode
-    optimal_value_avg = sum(list(optimal_value.values()))/max_episode
+    optimal_value_avg = sum(optimal_value)/max_episode
     error = 100 - (makespan_avg - optimal_value_avg)/optimal_value_avg*100
     print("makespan_avg: ", makespan_avg)
     print("optimal_value_avg: ", optimal_value_avg)
     print("Gap %: ", error)
 
-    plt.scatter(optimal_value.keys(), makespan, marker="o")
-    plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
-    plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
+    # plt.scatter(optimal_value.keys(), makespan, marker="o")
+    # plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
+    # plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
         # time.sleep(100)
 
+
+class JspEnv_v2(gym.Env, ABC):
+    def __init__(self, env_config):
+        self.env_config = env_config
+        self.env = DisjunctiveGraphJspEnv(env_config)
+        self.name = "DisjunctiveGraphJspEnv"
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+
+    def reset(self):
+        jsp = self.env_config["jsp"]
+        return self.env.reset(jsp)
+
+    def step(self, action):
+
+        return self.env.step(action)
+
+    def render(self, mode, show):
+
+        return self.env.render(mode=mode, show=show)
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -290,20 +351,7 @@ if __name__ == "__main__":
         raise ValueError()
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
-    register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(
-        {
-            "jps_instance": instance_creator(args.instance_size, args.run_type),
-            "scaling_divisor": args.scaling_divisor,
-            "scale_reward": args.scale_reward,
-            "perform_left_shift_if_possible": args.left_shift,
-            "normalize_observation_space": args.normalize_obs,
-            "flat_observation_space": args.flat_obs,
-            "action_mode": args.action_mode,
-            "env_transform": args.masking,
-            "verbose": args.env_verbose,
-        }
-    ))
-
+    register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v2(c))
 
     if args.masking:
         if m == n == 3 and args.action_mode == "job":
@@ -345,7 +393,8 @@ if __name__ == "__main__":
                 "vf_share_layers": True
             },
             "env_config": {
-                "jps_instance": instance_creator(args.instance_size, args.run_type),
+                "jsp": evaluate_instance(args.instance_size, 0),
+                "reward_version": "A",
                 "scaling_divisor": args.scaling_divisor,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -354,6 +403,7 @@ if __name__ == "__main__":
                 "action_mode": args.action_mode,
                 "env_transform": args.masking,
                 "verbose": args.env_verbose,
+                "dtype": "float32",
             },
             "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
             "num_workers": args.no_of_workers,  # parallelism

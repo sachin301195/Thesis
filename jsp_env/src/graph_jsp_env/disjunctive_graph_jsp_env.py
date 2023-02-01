@@ -53,6 +53,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.normalize_observation_space = env_config["normalize_observation_space"]
         self.flat_observation_space = env_config["flat_observation_space"]
         self.dtype = env_config["dtype"]
+        self.job_initial_tasks = None
+        self.state = None
 
         # action setting
         self.perform_left_shift_if_possible = env_config["perform_left_shift_if_possible"]
@@ -242,6 +244,16 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 job_edge=True,
                 weight=self.G.nodes[task_id]['duration']
             )
+        machine_order = machine_order.reshape(self.total_tasks_without_dummies)
+        for i in range(n_machines):
+            machine_usage = [m+1 for m, x in enumerate(machine_order) if x == i]
+            for no in range(len(machine_usage)):
+                node = self.G.nodes[machine_usage[no]]
+                for task in machine_usage:
+                    if task == machine_usage[no]:
+                        pass
+                    else:
+                        self.G.add_edge(machine_usage[no], task, job_edge=False, weight=node["duration"])
 
     def reset(self, jsp):
         # remove machine edges/routes
@@ -264,8 +276,10 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.load_instance(jsp_instance=jps_instance, scaling_divisor=scaling_divisor)
         # log.info(f"Running the instance: \n {self.jsp[0]} \n with Optimal value: {self.opt_value}")
 
-        machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
-        self.G.remove_edges_from(machine_edges)
+        self.job_initial_tasks = [i * self.n_machines + 1 for i in range(self.n_machines)]
+
+        # machine_edges = [(from_, to_) for from_, to_, data_dict in self.G.edges(data=True) if not data_dict["job_edge"]]
+        # self.G.remove_edges_from(machine_edges)
 
         # reset machine routes dict
         self.machine_routes = {m_id: np.array([]) for m_id in range(self.n_machines)}
@@ -293,6 +307,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 log.info(f"handling action={action} (Task {task_id})")
             self.info = {
                 "finish_time": -1,
+                "makespan": 0,
                 **self._schedule_task(task_id=task_id)
             }
         else:  # case for self.action_mode == 'job'
@@ -303,6 +318,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 if self.verbose > 0:
                     log.info(f"job {action} is already completely scheduled. Ignoring it.")
                 self.info["valid_action"] = False
+                self.info["finish_time"] = -1
+                self.info["makespan"] = 0
+                task_id = 0
             else:
                 task_id = 1 + action * self.n_machines + np.argmax(job_mask)
                 if self.verbose > 1:
@@ -311,6 +329,19 @@ class DisjunctiveGraphJspEnv(gym.Env):
                     "finish_time": -1,
                     **self._schedule_task(task_id=task_id)
                 }
+        if task_id > 0 and self.info["finish_time"] > 0:
+            if len(self.machine_routes[self.G.nodes[task_id]["machine"]]) == self.n_machines:
+                last_task = self.machine_routes[self.G.nodes[task_id]["machine"]][-1]
+                edges = self.G.succ[last_task]
+                print(edges)
+                edge_end = []
+                for task in edges:
+                    if edges[task]["job_edge"]:
+                        pass
+                    else:
+                        edge_end.append(task)
+                for task_edge_to_remove in edge_end:
+                    self.G.remove_edge(last_task, task_edge_to_remove)
 
         # check if done
         min_length = min([len(route) for m_id, route in self.machine_routes.items()])
@@ -325,6 +356,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.info["makespan"] = 0
 
         if done:
+            print(self.machine_routes)
             try:
                 # by construction a cycle should never happen
                 # add cycle check just to be sure
@@ -335,20 +367,23 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 pass
 
             makespan = nx.dag_longest_path_length(self.G)
-            reward = - makespan / self.scaling_divisor if self.scale_reward else - makespan
+            # reward = - makespan / self.scaling_divisor if self.scale_reward else - makespan
 
             self.info["makespan"] = makespan
             self.info["optimal_value"] = self.opt_value
             self.info["gantt_df"] = self.network_as_dataframe()
             if self.verbose > 0:
-                log.info(f"makespan: {makespan}, return: {reward:.2f}")
+                log.info(f"makespan: {makespan}")
                 log.info(f"optimal value: {self.opt_value}")
 
         reward = self._calculate_reward(done)
+        if self.verbose > 0:
+            log.info(f"return: {reward}")
 
         self.info["scaling_divisor"] = self.scaling_divisor
 
-        state = self._state_array(action)
+        state = self._state_array(task_id - 1)
+
         return state, reward, done, self.info
 
     def _calculate_reward(self, done):
@@ -427,6 +462,18 @@ class DisjunctiveGraphJspEnv(gym.Env):
         m_id = node["machine"]
 
         prev_task_in_job_id, _ = list(self.G.in_edges(task_id))[0]
+        print(self.G.in_edges(task_id))
+        if (task_id in self.job_initial_tasks) or (task_id - 1 != prev_task_in_job_id):
+            if (prev_task_in_job_id != 0) and (task_id - 1 != prev_task_in_job_id):
+                change = True
+                count = 1
+                while change:
+                    prev_task_in_job_id, _ = list(self.G.in_edges(task_id))[count]
+                    if prev_task_in_job_id == 0:
+                        change = False
+                    else:
+                        count += 1
+
         prev_job_node = self.G.nodes[prev_task_in_job_id]
 
         if not prev_job_node["scheduled"]:
@@ -454,15 +501,31 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 if j_lower_bound_ft <= first_task_on_machine_st:
                     # schedule task as first node on machine
                     # self.render(show=["gantt_console"])
-                    self.info = self._insert_at_index_0(task_id=task_id, node=node, prev_job_node=prev_job_node, m_id=m_id)
-                    self.G.add_edge(
-                        task_id, m_first,
-                        job_edge=False,
-                        weight=duration
-                    )
-                    # self.render(show=["gantt_console"])
+                    self.info = self._insert_at_index_0(task_id=task_id, node=node, prev_job_node=prev_job_node,
+                                                        m_id=m_id)
+                    # self.G.add_edge(
+                    #     task_id, m_first,
+                    #     job_edge=False,
+                    #     weight=duration
+                    # )
+                    edges = self.G.succ[task_id]
+                    print(edges)
+                    edge_end = []
+                    for task in edges:
+                        if task == m_first:
+                            pass
+                        elif edges[task]["job_edge"]:
+                            pass
+                        else:
+                            edge_end.append(task)
+                    for task_edge_to_remove in edge_end:
+                        self.G.remove_edge(task_id, task_edge_to_remove)
+
+                    self.render(show=["gantt_console"])
+
                     return self.info
                 elif len_m_routes == 1:
+
                     return self._append_at_the_end(task_id=task_id, node=node, prev_job_node=prev_job_node, m_id=m_id)
 
                 # check if task can be scheduled between two tasks
@@ -494,16 +557,31 @@ class DisjunctiveGraphJspEnv(gym.Env):
                         job_edge=replaced_edge_data['job_edge'],
                         weight=replaced_edge_data['weight']
                     )
-                    # from the task to schedule to the next
-                    self.G.add_edge(
-                        task_id, m_next,
-                        job_edge=False,
-                        weight=duration
-                    )
+
+                    edges = self.G.succ[task_id]
+                    print(edges)
+                    edge_end = []
+                    for task in edges:
+                        if task == m_next:
+                            pass
+                        elif edges[task]["job_edge"]:
+                            pass
+                        else:
+                            edge_end.append(task)
+                    for task_edge_to_remove in edge_end:
+                        self.G.remove_edge(task_id, task_edge_to_remove)
+                    # # from the task to schedule to the next
+                    # self.G.add_edge(
+                    #     task_id, m_next,
+                    #     job_edge=False,
+                    #     weight=duration
+                    # )
                     # remove replaced edge
                     self.G.remove_edge(m_prev, m_next)
                     # insert task at the corresponding place in the machine routes list
                     self.machine_routes[m_id] = np.insert(self.machine_routes[m_id], i + 1, task_id)
+
+
 
                     if self.verbose > 1:
                         log.info(f"scheduled task {task_id} on machine {m_id} between task {m_prev:.0f} "
@@ -529,11 +607,25 @@ class DisjunctiveGraphJspEnv(gym.Env):
     def _append_at_the_end(self, task_id: int, node: dict, prev_job_node: dict, m_id: int) -> dict:
         prev_m_task = self.machine_routes[m_id][-1]
         prev_m_node = self.G.nodes[prev_m_task]
-        self.G.add_edge(
-            prev_m_task, task_id,
-            job_edge=False,
-            weight=int(prev_m_node['duration'])
-        )
+        # self.G.add_edge(
+        #     prev_m_task, task_id,
+        #     job_edge=False,
+        #     weight=int(prev_m_node['duration'])
+        # )
+
+        edges = self.G.succ[prev_m_task]
+        print(edges)
+        edge_end = []
+        for task in edges:
+            if task == task_id:
+                pass
+            elif edges[task]["job_edge"]:
+                pass
+            else:
+                edge_end.append(task)
+        for task_edge_to_remove in edge_end:
+            self.G.remove_edge(prev_m_task, task_edge_to_remove)
+
         self.machine_routes[m_id] = np.append(self.machine_routes[m_id], task_id)
         st = max(prev_job_node["finish_time"], prev_m_node["finish_time"])
         ft = st + node["duration"]
@@ -567,7 +659,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             "left_shift": 0,
         }
 
-    def _state_array(self, task_id) -> np.ndarray:
+    def _state_array(self, task) -> np.ndarray:
         adj = nx.to_numpy_array(self.G)[1:-1, 1:].astype(dtype=int)  # remove dummy tasks
         # print(adj)
         if self.start:
@@ -584,9 +676,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
             self.task_status = np.zeros((self.total_tasks_without_dummies, 2), dtype=self.dtype)
 
-        if task_id >= 0 and self.info["finish_time"] > 0:
-            self.task_status[task_id][1] = 1.0
-            self.task_status[task_id][0] = self.info["finish_time"]
+        if task >= 0 and self.info["finish_time"] > 0:
+            self.task_status[task][1] = 1.0
+            self.task_status[task][0] = self.info["finish_time"]
 
         if self.normalize_observation_space:
             # one hot encoding for task to machine mapping
@@ -598,8 +690,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 self.task_to_duration_mapping = self.task_to_duration_mapping / self.longest_processing_time
             # normalize
             adj = adj / self.longest_processing_time  # note: adj matrix contains weights
-            if task_id >= 0 and self.info["finish_time"] > 0:
-                self.task_status[task_id][0] /= self.scaling_divisor
+            if task >= 0 and self.info["finish_time"] > 0:
+                self.task_status[task][0] /= self.scaling_divisor
             # merge arrays
             res = np.concatenate((adj, self.task_to_machine_mapping, self.task_to_duration_mapping, self.task_status),
                                  axis=1, dtype=self.dtype)
