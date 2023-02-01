@@ -285,7 +285,7 @@ def instance_calculator(size):
         # print(machine, duration)
         machine = np.array(machine).reshape(m, m)
         duration = np.array(duration).reshape(m, m)
-        jsp = np.concatenate((machine, duration), axis=0, dtype="float32").reshape(2, m, m)
+        jsp = np.concatenate((machine, duration), axis=0, dtype=int).reshape(2, m, m)
         # print(jsp)
 
         return jsp, opt_value
