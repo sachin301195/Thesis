@@ -333,7 +333,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             if len(self.machine_routes[self.G.nodes[task_id]["machine"]]) == self.n_machines:
                 last_task = self.machine_routes[self.G.nodes[task_id]["machine"]][-1]
                 edges = self.G.succ[last_task]
-                print(edges)
+                # print(edges)
                 edge_end = []
                 for task in edges:
                     if edges[task]["job_edge"]:
@@ -356,7 +356,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.info["makespan"] = 0
 
         if done:
-            print(self.machine_routes)
+            # print(self.machine_routes)
             try:
                 # by construction a cycle should never happen
                 # add cycle check just to be sure
@@ -462,7 +462,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         m_id = node["machine"]
 
         prev_task_in_job_id, _ = list(self.G.in_edges(task_id))[0]
-        print(self.G.in_edges(task_id))
+        # print(self.G.in_edges(task_id))
         if (task_id in self.job_initial_tasks) or (task_id - 1 != prev_task_in_job_id):
             if (prev_task_in_job_id != 0) and (task_id - 1 != prev_task_in_job_id):
                 change = True
@@ -509,7 +509,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                     #     weight=duration
                     # )
                     edges = self.G.succ[task_id]
-                    print(edges)
+                    # print(edges)
                     edge_end = []
                     for task in edges:
                         if task == m_first:
@@ -559,7 +559,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                     )
 
                     edges = self.G.succ[task_id]
-                    print(edges)
+                    # print(edges)
                     edge_end = []
                     for task in edges:
                         if task == m_next:
@@ -614,7 +614,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         # )
 
         edges = self.G.succ[prev_m_task]
-        print(edges)
+        # print(edges)
         edge_end = []
         for task in edges:
             if task == task_id:
