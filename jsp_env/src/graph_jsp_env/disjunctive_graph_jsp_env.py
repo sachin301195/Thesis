@@ -521,7 +521,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                     for task_edge_to_remove in edge_end:
                         self.G.remove_edge(task_id, task_edge_to_remove)
 
-                    self.render(show=["gantt_console"])
+                    # self.render(show=["gantt_console"])
 
                     return self.info
                 elif len_m_routes == 1:
