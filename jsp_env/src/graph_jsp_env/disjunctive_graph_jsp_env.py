@@ -360,14 +360,15 @@ class DisjunctiveGraphJspEnv(gym.Env):
 
         if done:
             # print(self.machine_routes)
-            try:
-                # by construction a cycle should never happen
-                # add cycle check just to be sure
-                cycle = nx.find_cycle(self.G, source=self.src_task)
-                log.critical(f"CYCLE DETECTED cycle: {cycle}")
-                raise RuntimeError(f"CYCLE DETECTED cycle: {cycle}")
-            except nx.exception.NetworkXNoCycle:
-                pass
+            if not self.not_valid:
+                try:
+                    # by construction a cycle should never happen
+                    # add cycle check just to be sure
+                    cycle = nx.find_cycle(self.G, source=self.src_task)
+                    log.critical(f"CYCLE DETECTED cycle: {cycle}")
+                    raise RuntimeError(f"CYCLE DETECTED cycle: {cycle}")
+                except nx.exception.NetworkXNoCycle:
+                    pass
 
             makespan = nx.dag_longest_path_length(self.G)
             # reward = - makespan / self.scaling_divisor if self.scale_reward else - makespan
@@ -375,8 +376,11 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.info["makespan"] = makespan
             self.info["optimal_value"] = self.opt_value
             self.info["gantt_df"] = self.network_as_dataframe()
-            if self.verbose > 0:
+            if self.verbose > 0 and not self.not_valid:
                 log.info(f"makespan: {makespan}")
+                log.info(f"optimal value: {self.opt_value}")
+            else:
+                log.info("Stopping early")
                 log.info(f"optimal value: {self.opt_value}")
 
         reward = self._calculate_reward(done)
