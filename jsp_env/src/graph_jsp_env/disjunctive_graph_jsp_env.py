@@ -370,12 +370,12 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 except nx.exception.NetworkXNoCycle:
                     pass
 
-            makespan = nx.dag_longest_path_length(self.G)
+                makespan = nx.dag_longest_path_length(self.G)
             # reward = - makespan / self.scaling_divisor if self.scale_reward else - makespan
 
-            self.info["makespan"] = makespan
-            self.info["optimal_value"] = self.opt_value
-            self.info["gantt_df"] = self.network_as_dataframe()
+                self.info["makespan"] = makespan
+                self.info["optimal_value"] = self.opt_value
+                self.info["gantt_df"] = self.network_as_dataframe()
             if self.verbose > 0 and not self.not_valid:
                 log.info(f"makespan: {makespan}")
                 log.info(f"optimal value: {self.opt_value}")
