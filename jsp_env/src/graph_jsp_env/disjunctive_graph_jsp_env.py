@@ -352,6 +352,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
         else:
             self.not_valid = False
             self.time_length = max(self.time_length, self.info["finish_time"])
+            if self.time_length > (self.opt_value + 5):
+                self.not_valid =True
+                done = True
             self.sum_op += self.info["finish_time"] - self.info["start_time"]
             self.info["makespan"] = 0
 
@@ -400,6 +403,8 @@ class DisjunctiveGraphJspEnv(gym.Env):
         elif self.reward_version == "D":
             reward = ((self.time_length - self.info["finish_time"]) / self.scaling_divisor) \
                      * (not self.not_valid) - 5 * self.not_valid
+        # elif self.reward_version == "E":
+        #     reward = - 0.1 if
         else:
             reward = - (self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"])\
                      * done - 5 * self.not_valid
