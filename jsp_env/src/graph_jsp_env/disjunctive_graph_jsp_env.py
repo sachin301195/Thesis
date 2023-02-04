@@ -380,7 +380,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 log.info(f"makespan: {makespan}")
                 log.info(f"optimal value: {self.opt_value}")
             else:
-                log.info("Stopping early")
+                log.info(f"Stopping early at time: {self.time_length}")
                 log.info(f"optimal value: {self.opt_value}")
 
         reward = self._calculate_reward(done)
