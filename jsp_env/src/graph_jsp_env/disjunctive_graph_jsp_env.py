@@ -425,7 +425,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 else:
                     reward = 0.1
             else:
-                reward = -1
+                reward = - 0.1
 
             return reward
         else:
