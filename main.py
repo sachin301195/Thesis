@@ -372,8 +372,8 @@ if __name__ == "__main__":
             "disable_env_checking": True,
             "env_config": {
                 "jsp": instance_calculator(args.instance_size),
-                "reward_version": tune.grid_search(["A", "C", "D"]),
-                # "reward_version": "A",
+                # "reward_version": tune.grid_search(["A", "C", "D"]),
+                "reward_version": "A",
                 "scaling_divisor": 100,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -424,7 +424,7 @@ if __name__ == "__main__":
         algo_config = None
 
     stop = {
-        "training_iteration": 500
+        "training_iteration": 1
         # "episode_reward_mean": 30 - (40 * args.no_of_jobs * 0.002),
     }
     plots_save_path, agent_save_path, best_agent_save_path = setup(args.algo, timestamp)
