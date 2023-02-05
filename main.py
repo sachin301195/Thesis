@@ -372,8 +372,8 @@ if __name__ == "__main__":
             "disable_env_checking": True,
             "env_config": {
                 "jsp": instance_calculator(args.instance_size),
-                # "reward_version": tune.grid_search(["A", "C", "D"]),
-                "reward_version": "A",
+                "reward_version": tune.grid_search(["A", "B", "C", "D"]),
+                # "reward_version": "A",
                 "scaling_divisor": 100,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -388,7 +388,7 @@ if __name__ == "__main__":
             "num_workers": args.no_of_workers,  # parallelism
             "framework": 'torch',
             "rollout_fragment_length": 36,
-            "train_batch_size": 900,
+            "train_batch_size": 1116,
             "sgd_minibatch_size": 36,
             # "num_sgd_iter": 20,
             "vf_loss_coeff": 0.001,
