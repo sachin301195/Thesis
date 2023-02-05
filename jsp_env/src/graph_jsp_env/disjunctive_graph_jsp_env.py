@@ -260,6 +260,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.start = True
         self.not_valid = False
         self.sum_op = 1
+        self.time_length = 0
         self.info = {"finish_time": -1,
                      "makespan": 0}
         if self.scale_reward:
