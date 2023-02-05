@@ -354,7 +354,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
             self.not_valid = False
             self.time_length = max(self.time_length, self.info["finish_time"])
             # log.info(self.time_length)
-            if self.time_length > (self.opt_value + 5):
+            if self.time_length > (self.opt_value + 15):
                 self.not_valid =True
                 done = True
             self.sum_op += self.info["finish_time"] - self.info["start_time"]
