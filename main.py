@@ -388,7 +388,7 @@ if __name__ == "__main__":
             "num_workers": args.no_of_workers,  # parallelism
             "framework": 'torch',
             "rollout_fragment_length": 36,
-            "train_batch_size": 36,
+            "train_batch_size": 900,
             "sgd_minibatch_size": 36,
             # "num_sgd_iter": 20,
             "vf_loss_coeff": 0.001,
@@ -424,7 +424,7 @@ if __name__ == "__main__":
         algo_config = None
 
     stop = {
-        "training_iteration": 3
+        "training_iteration": 1000
         # "episode_reward_mean": 30 - (40 * args.no_of_jobs * 0.002),
     }
     plots_save_path, agent_save_path, best_agent_save_path = setup(args.algo, timestamp)
