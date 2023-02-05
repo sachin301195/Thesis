@@ -387,8 +387,8 @@ if __name__ == "__main__":
             "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
             "num_workers": args.no_of_workers,  # parallelism
             "framework": 'torch',
-            "rollout_fragment_length": 125,
-            "train_batch_size": 4000,
+            "rollout_fragment_length": 36,
+            "train_batch_size": 36,
             # "sgd_minibatch_size": 512,
             # "num_sgd_iter": 20,
             "vf_loss_coeff": 0.001,
