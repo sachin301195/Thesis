@@ -352,6 +352,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         else:
             self.not_valid = False
             self.time_length = max(self.time_length, self.info["finish_time"])
+            log.info(self.time_length)
             if self.time_length > (self.opt_value + 5):
                 self.not_valid =True
                 done = True
