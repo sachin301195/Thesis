@@ -421,9 +421,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 reward = - 5
             elif self.time_length <= self.opt_value:
                 if done:
-                    reward = 0.1
-                else:
                     reward = self.info["makespan"] / self.scaling_divisor
+                else:
+                    reward = 0.1
             else:
                 reward = -1
 
