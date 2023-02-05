@@ -402,7 +402,7 @@ if __name__ == "__main__":
             #                                    tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
             #                                    tune.uniform(0.0001, 0.001)]),
             # "num_envs_per_worker": 4,
-            # "horizon": 32,
+            "horizon": 36,
             # "timesteps_per_batch": 2048,
         },
             **cfg)
