@@ -401,22 +401,38 @@ class DisjunctiveGraphJspEnv(gym.Env):
         if self.reward_version == 'B':
             reward = - (self.time_length / self.scaling_divisor if self.scale_reward else - self.time_length) * \
                      (not self.not_valid) - 5 * self.not_valid
+
+            return reward
         elif self.reward_version == "C":
             try:
                 reward = -((((self.time_length * self.n_machines)/self.sum_op) / self.scaling_divisor)
                            * (not self.not_valid)) - 5 * self.not_valid
             except ZeroDivisionError:
                 pass
+
+            return reward
         elif self.reward_version == "D":
             reward = ((self.time_length - self.info["finish_time"]) / self.scaling_divisor) \
                      * (not self.not_valid) - 5 * self.not_valid
-        # elif self.reward_version == "E":
-        #     reward = - 0.1 if
+
+            return reward
+        elif self.reward_version == "E":
+            if self.not_valid:
+                reward = - 5
+            elif self.time_length <= self.opt_value:
+                if done:
+                    reward = 0.1
+                else:
+                    reward = self.info["makespan"] / self.scaling_divisor
+            else:
+                reward = -1
+
+            return reward
         else:
             reward = - (self.info["makespan"] / self.scaling_divisor if self.scale_reward else self.info["makespan"])\
                      * done - 5 * self.not_valid
 
-        return reward
+            return reward
 
     def render(self, mode="human", show: List[str] = None, **render_kwargs) -> Union[None, np.ndarray]:
         df = None
@@ -748,6 +764,16 @@ class DisjunctiveGraphJspEnv(gym.Env):
                     continue
 
                 prev_task_in_job_id, _ = list(self.G.in_edges(task_id))[0]
+                if (task_id in self.job_initial_tasks) or (task_id - 1 != prev_task_in_job_id):
+                    if (prev_task_in_job_id != 0) and (task_id - 1 != prev_task_in_job_id):
+                        change = True
+                        count = 1
+                        while change:
+                            prev_task_in_job_id, _ = list(self.G.in_edges(task_id))[count]
+                            if prev_task_in_job_id == 0:
+                                change = False
+                            else:
+                                count += 1
                 prev_job_node = self.G.nodes[prev_task_in_job_id]
 
                 if not prev_job_node["scheduled"]:
