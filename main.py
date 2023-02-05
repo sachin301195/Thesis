@@ -389,7 +389,7 @@ if __name__ == "__main__":
             "framework": 'torch',
             "rollout_fragment_length": 36,
             "train_batch_size": 36,
-            # "sgd_minibatch_size": 512,
+            "sgd_minibatch_size": 36,
             # "num_sgd_iter": 20,
             "vf_loss_coeff": 0.001,
             # "vf_loss_coeff": tune.grid_search([0.001, 0.00001]),
