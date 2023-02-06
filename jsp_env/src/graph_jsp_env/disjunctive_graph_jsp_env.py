@@ -43,11 +43,13 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.not_valid = None
         self.sum_op = None
         self.jsp = env_config["jsp"]
+        self.state = None
 
         self.env_config = env_config
         self.reward_version = env_config["reward_version"]
         self.scale_reward = env_config["scale_reward"]
         self.time_length = 0
+        self.reward = 0
 
         # observation settings
         self.normalize_observation_space = env_config["normalize_observation_space"]
@@ -261,6 +263,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         self.not_valid = False
         self.sum_op = 1
         self.time_length = 0
+        self.reward = 0
         self.info = {"finish_time": -1,
                      "makespan": 0}
         if self.scale_reward:
@@ -292,7 +295,9 @@ class DisjunctiveGraphJspEnv(gym.Env):
             node["start_time"] = None,
             node["finish_time"] = None
 
-        return self._state_array(-1)
+        self.state = self._state_array(-1)
+
+        return self.state
 
     def step(self, action: int) -> (np.ndarray, float, bool, dict):
         self.start = False
@@ -386,15 +391,15 @@ class DisjunctiveGraphJspEnv(gym.Env):
                 # log.info(f"Stopping early at time: {self.time_length}")
                 # log.info(f"optimal value: {self.opt_value}")
 
-        reward = self._calculate_reward(done)
+        self.reward = self._calculate_reward(done)
         if self.verbose > 0:
             log.info(f"return: {reward}")
 
         self.info["scaling_divisor"] = self.scaling_divisor
 
-        state = self._state_array(task_id - 1)
+        self.state = self._state_array(task_id - 1)
 
-        return state, reward, done, self.info
+        return self.state, self.reward, done, self.info
 
     def _calculate_reward(self, done):
         global reward
