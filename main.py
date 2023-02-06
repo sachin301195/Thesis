@@ -387,6 +387,7 @@ if __name__ == "__main__":
                 "verbose": args.env_verbose,
                 "dtype": "float32",
             },
+            "observation_space": None,
             "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
             "num_workers": args.no_of_workers,  # parallelism
             "framework": 'torch',
