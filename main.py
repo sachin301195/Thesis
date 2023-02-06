@@ -24,6 +24,7 @@ from ray import tune
 from ray.rllib.algorithms import ppo
 from ray.rllib.algorithms import a3c
 from ray.rllib.algorithms import dqn
+from ray.rllib.algorithms.dqn.dqn_torch_model import DQNTorchModel
 from ray.rllib.algorithms import alpha_zero
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
@@ -70,7 +71,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--algo",
     type=str,
-    default="AlphaZero",
+    default="DQN",
     choices=["PPO", "A2C", "A3C", "DQN", "AlphaZero"],
     help="The RLlib-registered algorithm to use.")
 parser.add_argument(
@@ -126,7 +127,7 @@ parser.add_argument(
     help="Use LSTM or not")
 parser.add_argument(
     "--masking",
-    default="mask",
+    default=None,
     type=str,
     choices=[None, "mask"],
     help="Use masking or not")
@@ -156,7 +157,7 @@ parser.add_argument(
     help="Perform left shift if possible or not for the job operations")
 parser.add_argument(
     "--action-mode",
-    default='job',
+    default='task',
     type=str,
     choices=['task', 'job'],
     help="Choose action mode for the env")
@@ -369,8 +370,48 @@ if __name__ == "__main__":
 
     if args.algo == 'DQN':
         cfg = {
-            "hidden": [],
-            "dueling": False
+            # "hiddens ": [],
+            "dueling": False,
+            "env": f'Dis_jsp_{args.instance_size}',
+            "model": {
+                "custom_model": f'Dis_jsp_{args.instance_size}',
+                # "vf_share_layers": True
+            },
+            "disable_env_checking": True,
+            "env_config": {
+                "jsp": instance_calculator(args.instance_size),
+                "reward_version": tune.grid_search(["F", "E", "C", "D", "A", "B"]),
+                # "reward_version": "A",
+                "scaling_divisor": 100,
+                "scale_reward": args.scale_reward,
+                "perform_left_shift_if_possible": args.left_shift,
+                "normalize_observation_space": args.normalize_obs,
+                "flat_observation_space": args.flat_obs,
+                "action_mode": args.action_mode,
+                "env_transform": args.masking,
+                "verbose": args.env_verbose,
+                "dtype": "float32",
+            },
+            "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
+            "num_workers": args.no_of_workers,  # parallelism
+            "framework": 'torch',
+            "rollout_fragment_length": 36,
+            "train_batch_size": 1116,
+            # "sgd_minibatch_size": 36,
+            # "num_sgd_iter": 20,
+            # "vf_loss_coeff": 0.001,
+            # "vf_loss_coeff": tune.grid_search([0.001, 0.00001]),
+            # "vf_clip_param": 10,
+            "lr": 0.00001,
+            # "lr": 0.0001,
+            # "callbacks": MyCallbacks,
+            # "optimizer": "SGD",
+            # "entropy_coeff": tune.grid_search([tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
+            #                                    tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
+            #                                    tune.uniform(0.0001, 0.001)]),
+            # "num_envs_per_worker": 4,
+            "horizon": 36,
+            # "timesteps_per_batch": 2048,
         }
     else:
         cfg = {}
@@ -419,24 +460,24 @@ if __name__ == "__main__":
             # "timesteps_per_batch": 2048,
         },
             **cfg)
-        if args.algo == 'PPO':
-            algo_config = ppo.DEFAULT_CONFIG.copy()
-        elif args.algo == 'A3C':
-            algo_config = a3c.DEFAULT_CONFIG.copy()
-        elif args.algo == "AlphaZero":
-            algo_config = alpha_zero.DEFAULT_CONFIG.copy()
-        else:
-            algo_config = dqn.DEFAULT_CONFIG.copy()
-        algo_config.update(config)
-        algo_config['model']['fcnet_activation'] = 'relu'
-        if args.lstm:
-            algo_config['model']['use_lstm'] = True
-            algo_config['model']['lstm_cell_size'] = 64
+    else:
+        config = dict(**cfg)
+    if args.algo == 'PPO':
+        algo_config = ppo.DEFAULT_CONFIG.copy()
+    elif args.algo == 'A3C':
+        algo_config = a3c.DEFAULT_CONFIG.copy()
+    elif args.algo == "AlphaZero":
+        algo_config = alpha_zero.DEFAULT_CONFIG.copy()
+    else:
+        algo_config = dqn.DEFAULT_CONFIG.copy()
+    algo_config.update(config)
+    algo_config['model']['fcnet_activation'] = 'relu'
+    if args.lstm:
+        algo_config['model']['use_lstm'] = True
+        algo_config['model']['lstm_cell_size'] = 64
         # algo_config['evaluation_interval'] = args.eval_interval
         # algo_config['evaluation_duration'] = 10
         # algo_config["evaluation_parallel_to_training"]: True
-    else:
-        algo_config = None
 
     stop = {
         "training_iteration": 1000
