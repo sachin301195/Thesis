@@ -263,7 +263,7 @@ def setup(algo, timestamp):
 
 def instance_calculator(size):
     with open(f"./data/{size}.json") as f:
-        data = json.load(DATA)
+        data = json.load(f)
         m = int(size[0])
         if m not in [3, 6, 8]:
             if m == 1:
