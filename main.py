@@ -365,7 +365,7 @@ if __name__ == "__main__":
     else:
         cfg = {}
 
-    if args.algo == 'PPO' or args.algo == 'A3C':
+    if args.algo == 'PPO' or args.algo == 'A3C' or args.algo == "AlphaZero":
         config = dict({
             "env": f'Dis_jsp_{args.instance_size}',
             "model": {
@@ -387,7 +387,6 @@ if __name__ == "__main__":
                 "verbose": args.env_verbose,
                 "dtype": "float32",
             },
-            "observation_space": None,
             "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
             "num_workers": args.no_of_workers,  # parallelism
             "framework": 'torch',
