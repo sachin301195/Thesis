@@ -1,5 +1,5 @@
 from ray.rllib.algorithms.dqn.dqn_torch_model import DQNTorchModel
-from ray.rllib.algorithms.alpha_zero.models.custom_torch_models import TorchModelV2
+from ray.rllib.algorithms.alpha_zero.models.custom_torch_models import ActorCriticModel
 from ray.rllib.algorithms.dqn.distributional_q_tf_model import DistributionalQTFModel
 from ray.rllib.models.torch.fcnet import FullyConnectedNetwork as TorchFC
 from ray.rllib.utils.framework import try_import_torch
@@ -507,5 +507,5 @@ class TorchParametricActionsModelv10(DQNTorchModel):
         return self.action_model.value_function()
 
 
-class TorchParametricActionsModelv10(TorchModelV2):
+class TorchParametricActionsModelv10(ActorCriticModel):
     pass
