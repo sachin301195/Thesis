@@ -162,7 +162,7 @@ parser.add_argument(
     help="Perform left shift if possible or not for the job operations")
 parser.add_argument(
     "--action-mode",
-    default='job',
+    default='task',
     type=str,
     choices=['task', 'job'],
     help="Choose action mode for the env")
@@ -232,7 +232,19 @@ def evaluate_instance(size, no):
 
 
 def evaluate(algo, algo_config: dir, plots_save_path):
-    f = [r"E:\Sachin\agents_runs\agents_runs\PPO\2023-01-28_best_agents\PPO\PPO_Dis_jsp_6x6_31806_00004_4_reward_version=A,vf_loss_coeff=0.0000_2023-01-29_03-29-44\checkpoint_000050\algorithm_state.pkl"]
+    checkpoint_path = r"E:\Sachin\agents_runs\agents_runs\PPO\New folder1\Reward with horizon 6x6"
+    entries = os.listdir(checkpoint_path)
+    f = []
+    for entry in entries:
+        if entry[:3] == "PPO":
+            sub_entries = os.listdir(checkpoint_path + "/" + entry)
+            for sub_entry in sub_entries:
+                if sub_entry[:10] == "checkpoint":
+                    checkpoint = os.listdir(checkpoint_path + "/" + entry + "/" + sub_entry)
+                    for checkpoint_entry in checkpoint:
+                        if checkpoint_entry[-3:] == "pkl":
+                            f.append(checkpoint_path + "/" + entry + "/" + sub_entry + "/" + checkpoint_entry)
+    # f = [r"E:\Sachin\agents_runs\agents_runs\PPO\2023-01-28_best_agents\PPO\PPO_Dis_jsp_6x6_31806_00004_4_reward_version=A,vf_loss_coeff=0.0000_2023-01-29_03-29-44\checkpoint_000050\algorithm_state.pkl"]
     for no, path in enumerate(f):
         if algo == 'PPO':
             agent = ppo.PPO(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
@@ -241,61 +253,72 @@ def evaluate(algo, algo_config: dir, plots_save_path):
         else:
             agent = dqn.DQN(config=algo_config, env=f'Dis_jsp_{args.instance_size}')
         agent.restore(path)
-    logger.info(f"Evaluating algo: {algo} with jsp size: {args.instance_size}")
-    curr_episode = 0
-    max_episode = 10
+        logger.info(f"Evaluating algo: {algo} with jsp size: {args.instance_size}")
+        curr_episode = 0
+        max_episode = 100
 
-    time_begin = time.time()
-    score_episode = []
-    optimal_value = []
-    makespan = []
-    while curr_episode < max_episode:
-        jsp = evaluate_instance(args.instance_size, curr_episode)
-        print(jsp[0].shape)
-        logger.info(f"Evaluating episode: {curr_episode}")
-        logger.info(f"Jsp problem {jsp[0]}, with optimal value \n {jsp[1]}")
-        env_config = {
-            "jsp": jsp,
-            "reward_version": "A",
-            "scaling_divisor": args.scaling_divisor,
-            "scale_reward": args.scale_reward,
-            "perform_left_shift_if_possible": args.left_shift,
-            "normalize_observation_space": args.normalize_obs,
-            "flat_observation_space": args.flat_obs,
-            "action_mode": args.action_mode,
-            "env_transform": args.masking,
-            "verbose": args.env_verbose,
-            "dtype": "float32",
-        }
-        env = DisjunctiveGraphJspEnv(env_config=env_config)
-        obs = env.reset(jsp)
-        done = False
-        score = 0
-        step = 0
-        while not done:
-            score_episode.append(score)
-            action = agent.compute_single_action(obs)
-            obs, reward, done, info = env.step(action)
-            score += reward
-            step += 1
-            if len(info) > 0 and done:
-                # logger.info(f"Details: {info}")
-                makespan.append(info["makespan"])
-                optimal_value.append(info["optimal_value"])
+        time_begin = time.time()
+        score_episode = []
+        optimal_value = []
+        makespan = []
+        while curr_episode < max_episode:
+            jsp = evaluate_instance(args.instance_size, curr_episode)
+            # print(jsp[0].shape)
+            # logger.info(f"Evaluating episode: {curr_episode}")
+            # logger.info(f"Jsp problem {jsp[0]}, with optimal value \n {jsp[1]}")
+            env_config = {
+                "jsp": jsp,
+                "reward_version": "A",
+                "scaling_divisor": args.scaling_divisor,
+                "scale_reward": args.scale_reward,
+                "perform_left_shift_if_possible": args.left_shift,
+                "normalize_observation_space": args.normalize_obs,
+                "flat_observation_space": args.flat_obs,
+                "action_mode": args.action_mode,
+                "env_transform": args.masking,
+                "verbose": args.env_verbose,
+                "dtype": "float32",
+            }
+            if "reward_version=A" in path:
+                env_config["reward_version"] = "A"
+            elif "reward_version=B" in path:
+                env_config["reward_version"] = "B"
+            elif "reward_version=C" in path:
+                env_config["reward_version"] = "C"
+            elif "reward_version=D" in path:
+                env_config["reward_version"] = "D"
+            else:
+                env_config["reward_version"] = "E"
+            env = DisjunctiveGraphJspEnv(env_config=env_config)
+            obs = env.reset(jsp)
+            done = False
+            score = 0
+            step = 0
+            while not done:
+                score_episode.append(score)
+                action = agent.compute_single_action(obs)
+                obs, reward, done, info = env.step(action)
+                score += reward
+                step += 1
+                if len(info) > 0 and done:
+                    # logger.info(f"Details: {info}")
+                    makespan.append(info["makespan"])
+                    optimal_value.append(info["optimal_value"])
 
-        # env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
-        curr_episode += 1
+            # env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
+            curr_episode += 1
 
-    makespan_avg = sum(makespan)/max_episode
-    optimal_value_avg = sum(optimal_value)/max_episode
-    error = 100 - (makespan_avg - optimal_value_avg)/optimal_value_avg*100
-    print("makespan_avg: ", makespan_avg)
-    print("optimal_value_avg: ", optimal_value_avg)
-    print("Gap %: ", error)
+        makespan_avg = sum(makespan)/max_episode
+        optimal_value_avg = sum(optimal_value)/max_episode
+        error = 100 - (makespan_avg - optimal_value_avg)/optimal_value_avg*100
+        print(f"checkpoint-no: {path[-24:-20]}")
+        print("makespan_avg: ", makespan_avg)
+        print("optimal_value_avg: ", optimal_value_avg)
+        print("Gap %: ", error)
 
-    # plt.scatter(optimal_value.keys(), makespan, marker="o")
-    # plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
-    # plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
+        # plt.scatter(optimal_value.keys(), makespan, marker="o")
+        # plt.scatter(optimal_value.keys(), optimal_value.values(), marker="^")
+        # plt.savefig(f"{plots_save_path}/makespan_{args.instance_size}")
         # time.sleep(100)
 
 

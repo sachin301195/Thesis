@@ -47,11 +47,11 @@ TRIAL = False
 if __name__ == "__main__":
     size = "3x3"
     c_episode = 0
-    while c_episode <= NUM_EPISODES:
+    while c_episode < NUM_EPISODES:
         jsp = evaluate_instance(size, c_episode)
         env_config = {
             "jsp": jsp,
-            "reward_version": "A",
+            "reward_version": "E",
             # "reward_version": "A",
             "scaling_divisor": 100,
             "scale_reward": True,
@@ -72,12 +72,17 @@ if __name__ == "__main__":
         # print(nx.to_numpy_array(env.G)[1:-1, 2:].astype(dtype=int))
         step = 0
         score = 0
+        steps = [0, 1, 6, 3, 2, 7, 4, 8, 5]
         while not done:
-            action = env.action_space.sample()
+            # action = env.action_space.sample()
+            action = steps[step]
             state, reward, done, info = env.step(action)
-            print(state["observations"])
+            print(state["action_mask"])
             score += reward
+            step += 1
 
+        # env.render(mode="human", show=["gantt_window", "gantt_console", "graph_window", "graph_console"])
+        # time.sleep(300)
         REWARDS.append(score)
         MAKESPAN.append(info["makespan"])
         OPTIMUM_VALUE.append(info["optimal_value"])

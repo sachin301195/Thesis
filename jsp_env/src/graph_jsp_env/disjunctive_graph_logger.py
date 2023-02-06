@@ -3,10 +3,7 @@ import shutil
 
 from rich.logging import RichHandler
 
-
-# print banner when logger is imported
 w, h = shutil.get_terminal_size((80, 20))
-
 
 FORMAT = "%(message)s"
 logging.basicConfig(
