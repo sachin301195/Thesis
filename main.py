@@ -24,6 +24,7 @@ from ray import tune
 from ray.rllib.algorithms import ppo
 from ray.rllib.algorithms import a3c
 from ray.rllib.algorithms import dqn
+from ray.rllib.algorithms import alpha_zero
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
@@ -69,8 +70,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--algo",
     type=str,
-    default="PPO",
-    choices=["PPO", "A2C", "A3C", "DQN"],
+    default="AlphaZero",
+    choices=["PPO", "A2C", "A3C", "DQN", "AlphaZero"],
     help="The RLlib-registered algorithm to use.")
 parser.add_argument(
     "--as-test",
@@ -372,8 +373,8 @@ if __name__ == "__main__":
             "disable_env_checking": True,
             "env_config": {
                 "jsp": instance_calculator(args.instance_size),
-                "reward_version": tune.grid_search(["F", "E", "C", "D", "A", "B"]),
-                # "reward_version": "A",
+                # "reward_version": tune.grid_search(["F", "E", "C", "D", "A", "B"]),
+                "reward_version": "A",
                 "scaling_divisor": 100,
                 "scale_reward": args.scale_reward,
                 "perform_left_shift_if_possible": args.left_shift,
@@ -410,6 +411,8 @@ if __name__ == "__main__":
             algo_config = ppo.DEFAULT_CONFIG.copy()
         elif args.algo == 'A3C':
             algo_config = a3c.DEFAULT_CONFIG.copy()
+        elif args.algo == "AlphaZero":
+            algo_config = alpha_zero.DEFAULT_CONFIG.copy()
         else:
             algo_config = dqn.DEFAULT_CONFIG.copy()
         algo_config.update(config)
