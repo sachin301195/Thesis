@@ -352,7 +352,7 @@ if __name__ == "__main__":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv7)
             else:
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv8)
-    elif args.maskin == "mask":
+    elif args.masking == "mask":
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv10)
     else:
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionModel)
