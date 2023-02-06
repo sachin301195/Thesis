@@ -131,7 +131,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         elif self.env_transform == 'mask':
             self.observation_space = gym.spaces.Dict({
                 "action_mask": gym.spaces.Box(0, 1, shape=(self.action_space.n,), dtype=np.int32),
-                "observations": gym.spaces.Box(
+                "obs": gym.spaces.Box(
                     low=0.0,
                     high=10.0 if self.normalize_observation_space else jsp_instance.max(),
                     shape=self.observation_space_shape,
@@ -746,7 +746,7 @@ class DisjunctiveGraphJspEnv(gym.Env):
         if self.env_transform == 'mask':
             res = OrderedDict({
                 "action_mask": np.array(self.valid_action_mask()).astype(np.int32),
-                "observations": res
+                "obs": res
             })
 
         return res

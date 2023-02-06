@@ -331,7 +331,7 @@ if __name__ == "__main__":
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
     register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
-    if args.masking == "mask":
+    if args.masking == "mask" and (args.algo != "AlphaZero"):
         if m == n == 3:
             if args.action_mode == "job":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
@@ -352,6 +352,8 @@ if __name__ == "__main__":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv7)
             else:
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv8)
+    elif args.maskin == "mask":
+        ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv10)
     else:
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionModel)
 
