@@ -71,7 +71,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--algo",
     type=str,
-    default="DQN",
+    default="A3C",
     choices=["PPO", "A2C", "A3C", "DQN", "AlphaZero"],
     help="The RLlib-registered algorithm to use.")
 parser.add_argument(
@@ -127,7 +127,7 @@ parser.add_argument(
     help="Use LSTM or not")
 parser.add_argument(
     "--masking",
-    default=None,
+    default="mask",
     type=str,
     choices=[None, "mask"],
     help="Use masking or not")
@@ -397,21 +397,7 @@ if __name__ == "__main__":
             "framework": 'torch',
             "rollout_fragment_length": 36,
             "train_batch_size": 1116,
-            # "sgd_minibatch_size": 36,
-            # "num_sgd_iter": 20,
-            # "vf_loss_coeff": 0.001,
-            # "vf_loss_coeff": tune.grid_search([0.001, 0.00001]),
-            # "vf_clip_param": 10,
             "lr": 0.00001,
-            # "lr": 0.0001,
-            # "callbacks": MyCallbacks,
-            # "optimizer": "SGD",
-            # "entropy_coeff": tune.grid_search([tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
-            #                                    tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
-            #                                    tune.uniform(0.0001, 0.001)]),
-            # "num_envs_per_worker": 4,
-            # "horizon": 36,
-            # "timesteps_per_batch": 2048,
         }
     else:
         cfg = {}
@@ -443,7 +429,7 @@ if __name__ == "__main__":
             "framework": 'torch',
             "rollout_fragment_length": 36,
             "train_batch_size": 1116,
-            "sgd_minibatch_size": 36,
+            # "sgd_minibatch_size": 36,
             # "num_sgd_iter": 20,
             # "vf_loss_coeff": 0.001,
             # "vf_loss_coeff": tune.grid_search([0.001, 0.00001]),
