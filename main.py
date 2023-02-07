@@ -22,8 +22,9 @@ from typing import Dict
 import ray
 from ray import tune
 from ray.rllib.algorithms import ppo
-from ray.rllib.algorithms import a3c
+from ray.rllib.algorithms import a3c, a2c
 from ray.rllib.algorithms import dqn
+from ray.rllib.algorithms import sac
 from ray.rllib.algorithms.dqn.dqn_torch_model import DQNTorchModel
 from ray.rllib.algorithms import alpha_zero
 from ray.rllib.env.env_context import EnvContext
@@ -71,8 +72,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--algo",
     type=str,
-    default="A3C",
-    choices=["PPO", "A2C", "A3C", "DQN", "AlphaZero"],
+    default="A2C",
+    choices=["PPO", "A2C", "A3C", "DQN", "AlphaZero", "SAC"],
     help="The RLlib-registered algorithm to use.")
 parser.add_argument(
     "--as-test",
@@ -342,7 +343,7 @@ if __name__ == "__main__":
 
     ray.init(local_mode=args.local_mode, object_store_memory=100000000)
     register_env(f'Dis_jsp_{args.instance_size}', lambda c: JspEnv_v1(c))
-    if args.masking == "mask" and (args.algo != "AlphaZero"):
+    if args.masking == "mask" and (args.algo != "AlphaZero") and (args.algo != "SAC"):
         if m == n == 3:
             if args.action_mode == "job":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv1)
@@ -363,8 +364,10 @@ if __name__ == "__main__":
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv7)
             else:
                 ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv8)
-    elif args.masking == "mask":
+    elif args.masking == "mask" and (args.algo == "AlphaZero"):
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv10)
+    elif args.algo == "SAC":
+        ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionsModelv11)
     else:
         ModelCatalog.register_custom_model(f'Dis_jsp_{args.instance_size}', TorchParametricActionModel)
 
@@ -402,7 +405,7 @@ if __name__ == "__main__":
     else:
         cfg = {}
 
-    if args.algo == 'PPO' or args.algo == 'A3C' or args.algo == "AlphaZero":
+    if args.algo == 'PPO' or args.algo == 'A3C' or args.algo == "AlphaZero" or args.algo == "A2C":
         config = dict({
             "env": f'Dis_jsp_{args.instance_size}',
             "model": {
@@ -450,7 +453,7 @@ if __name__ == "__main__":
         config = dict(**cfg)
     if args.algo == 'PPO':
         algo_config = ppo.DEFAULT_CONFIG.copy()
-    elif args.algo == 'A3C':
+    elif args.algo == 'A3C' or args.algo == 'A2C':
         algo_config = a3c.DEFAULT_CONFIG.copy()
     elif args.algo == "AlphaZero":
         algo_config = alpha_zero.DEFAULT_CONFIG.copy()

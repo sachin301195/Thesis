@@ -1,5 +1,6 @@
 from ray.rllib.algorithms.dqn.dqn_torch_model import DQNTorchModel
 from ray.rllib.algorithms.alpha_zero.models.custom_torch_models import ActorCriticModel, DenseModel
+from ray.rllib.algorithms.sac.sac_torch_model import SACTorchModel
 from ray.rllib.algorithms.dqn.distributional_q_tf_model import DistributionalQTFModel
 from ray.rllib.models.torch.fcnet import FullyConnectedNetwork as TorchFC
 from ray.rllib.utils.framework import try_import_torch
@@ -508,4 +509,8 @@ class TorchParametricActionsModelv10(DQNTorchModel):
 
 
 class TorchParametricActionsModelv10(DenseModel):
+    pass
+
+
+class TorchParametricActionsModelv11(SACTorchModel):
     pass
