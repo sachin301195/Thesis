@@ -83,7 +83,7 @@ parser.add_argument(
 parser.add_argument(
     "--instance-size",
     type=str,
-    default="6x6",
+    default="8x8",
     choices=["3x3", "6x6", "8x8", "10x10", "15x15", "any"],
     help="Jsp instance size")
 parser.add_argument(
@@ -447,7 +447,7 @@ if __name__ == "__main__":
             #                                    tune.uniform(0.0001, 0.001), tune.uniform(0.0001, 0.001),
             #                                    tune.uniform(0.0001, 0.001)]),
             # "num_envs_per_worker": 4,
-            "horizon": 36,
+            # "horizon": ,
             # "timesteps_per_batch": 2048,
         },
             **cfg)
