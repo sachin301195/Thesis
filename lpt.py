@@ -77,13 +77,14 @@ if __name__ == "__main__":
     opt_value_list = []
     makespan_list = []
     for i in range(100):
-        jsp, opt_value = evaluate_instance("6x6", i)
+        jsp, opt_value = evaluate_instance("8x8", i)
         placements, makespan = lpt(jsp, opt_value)
         opt_value_list.append(opt_value)
         makespan_list.append(makespan)
         if i == 99:
             print(opt_value, makespan)
 
-    opt_value_avg = sum(opt_value_list)/100
-    makespan_avg = sum(makespan_list)/100
-    print(opt_value_avg, makespan_avg)
+    opt_value_avg = sum(opt_value_list) / 100
+    makespan_avg = sum(makespan_list) / 100
+    gap = (opt_value_avg - makespan_avg) / opt_value_avg * 100
+    print(opt_value_avg, makespan_avg, gap)

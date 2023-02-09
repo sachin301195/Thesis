@@ -3,7 +3,7 @@ import json
 from evaluate import evaluate_instance
 
 
-def spt(jsp, opt_value):
+def lpt(jsp, opt_value):
     _, num_mc, num_jobs = jsp.shape
     machines_ = np.array(jsp[0])
     tmp = np.zeros((num_jobs, num_mc + 1), dtype=int)
@@ -42,17 +42,14 @@ def spt(jsp, opt_value):
         for m in range(num_mc):
 
             job = None
-            duration = 99999
+            duration = 0
 
             for j in range(num_jobs):
 
-                if machines_Idx[j] == m and durations_Idx[j] < duration and mask[j]:
+                if machines_Idx[j] == m and mask[j]:
                     job = j
                     duration = durations_Idx[j]
-                if duration < 99999:
                     final_duration[m] = duration
-                else:
-                    final_duration[m] = 0
 
             if job != None:
                 placements[m].append([job, indices[job]])
@@ -78,13 +75,13 @@ if __name__ == "__main__":
     makespan_list = []
     for i in range(100):
         jsp, opt_value = evaluate_instance("8x8", i)
-        placements, makespan = spt(jsp, opt_value)
+        placements, makespan = lpt(jsp, opt_value)
         opt_value_list.append(opt_value)
         makespan_list.append(makespan)
         if i == 99:
             print(opt_value, makespan)
 
-    opt_value_avg = sum(opt_value_list)/100
-    makespan_avg = sum(makespan_list)/100
-    gap = (opt_value_avg - makespan_avg)/opt_value_avg*100
+    opt_value_avg = sum(opt_value_list) / 100
+    makespan_avg = sum(makespan_list) / 100
+    gap = (opt_value_avg - makespan_avg) / opt_value_avg * 100
     print(opt_value_avg, makespan_avg, gap)
