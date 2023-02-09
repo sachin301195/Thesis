@@ -232,7 +232,7 @@ def evaluate_instance(size, no):
 
 
 def evaluate(algo, algo_config: dir, plots_save_path):
-    checkpoint_path = r"E:\Sachin\agents_runs\agents_runs\PPO\New folder1\Reward with horizon 6x6"
+    checkpoint_path = r"E:\Sachin\Final\PPO\New folder1\2023-02-06_best_agents\PPO"
     entries = os.listdir(checkpoint_path)
     f = []
     for entry in entries:
@@ -287,6 +287,8 @@ def evaluate(algo, algo_config: dir, plots_save_path):
                 env_config["reward_version"] = "C"
             elif "reward_version=D" in path:
                 env_config["reward_version"] = "D"
+            elif "reward_version=F" in path:
+                env_config["reward_version"] = "F"
             else:
                 env_config["reward_version"] = "E"
             env = DisjunctiveGraphJspEnv(env_config=env_config)
@@ -310,7 +312,7 @@ def evaluate(algo, algo_config: dir, plots_save_path):
 
         makespan_avg = sum(makespan)/max_episode
         optimal_value_avg = sum(optimal_value)/max_episode
-        error = 100 - (makespan_avg - optimal_value_avg)/optimal_value_avg*100
+        error = (makespan_avg - optimal_value_avg)/optimal_value_avg*100
         print(f"checkpoint-no: {path[-24:-20]}")
         print("makespan_avg: ", makespan_avg)
         print("optimal_value_avg: ", optimal_value_avg)
