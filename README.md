@@ -41,7 +41,7 @@ If you're interested in exploring and replicating this research project, follow 
    ```bash
    git clone https://github.com/sachin301195/Thesis.git
 2. **Set Up Environment**: Ensure you have the required dependencies and a Python environment set up. Use environment.yml to create your Python environment
-3. **Experimentation***: Use [Test Code](https://github.com/sachin301195/Thesis/blob/main/test.py), for the experimentation and exploration of the custom environment.
+3. **Experimentation**: Use [Test Code](https://github.com/sachin301195/Thesis/blob/main/test.py), for the experimentation and exploration of the custom environment.
 
 ## License   
 
