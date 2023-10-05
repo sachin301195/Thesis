@@ -1,6 +1,6 @@
 # Intelligent Job Scheduling using GNN-RL
 
-Welcome to the GitHub repository for the project "Intelligent Job Scheduling using Graph Neural Network-based Reinforcement Learning (GNN-RL)." This project is a part of my master's thesis in Information Technology, completed in [2023]. Here, you'll find the code and documentation related to the research and implementation of intelligent job scheduling techniques.
+Welcome to the GitHub repository for the project "Intelligent Job Scheduling using Graph Neural Network-based Reinforcement Learning (GNN-RL)." This project is a part of my master's thesis in Information Technology, completed in 2023. Here, you'll find the code and documentation related to the research and implementation of intelligent job scheduling techniques.
 
 ## Table of Contents
 
